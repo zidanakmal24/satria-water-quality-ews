@@ -1,0 +1,15 @@
+artifact_uri: file:///c:/Users/HP/Desktop/satria-water-quality-ews/notebooks/mlruns/423968794742983435/3dbb2c89286240ea83c07dfbe371b817/artifacts
+end_time: null
+entry_point_name: ''
+experiment_id: '423968794742983435'
+lifecycle_stage: active
+run_id: 3dbb2c89286240ea83c07dfbe371b817
+run_name: Session Initialized b9ec
+run_uuid: 3dbb2c89286240ea83c07dfbe371b817
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1780143969420
+status: 1
+tags: []
+user_id: HP

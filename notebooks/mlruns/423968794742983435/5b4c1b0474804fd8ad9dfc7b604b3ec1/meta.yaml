@@ -1,0 +1,15 @@
+artifact_uri: file:///c:/Users/HP/Desktop/satria-water-quality-ews/notebooks/mlruns/423968794742983435/5b4c1b0474804fd8ad9dfc7b604b3ec1/artifacts
+end_time: 1780144153806
+entry_point_name: ''
+experiment_id: '423968794742983435'
+lifecycle_stage: active
+run_id: 5b4c1b0474804fd8ad9dfc7b604b3ec1
+run_name: Light Gradient Boosting Machine
+run_uuid: 5b4c1b0474804fd8ad9dfc7b604b3ec1
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1780144152556
+status: 3
+tags: []
+user_id: HP

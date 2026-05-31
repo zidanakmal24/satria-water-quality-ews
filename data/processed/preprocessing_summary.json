@@ -1,0 +1,37 @@
+{
+  "cleaned_rows": 4300,
+  "cleaned_columns": 17,
+  "train_rows": 3440,
+  "test_rows": 860,
+  "feature_count": 15,
+  "features": [
+    "Temperature",
+    "Turbidity (cm)",
+    "Dissolved Oxygen (mg/L)",
+    "Biochemical Oxygen Demand (mg/L)",
+    "Carbon Dioxide (CO2)",
+    "pH",
+    "Total Alkalinity (mg L-1)",
+    "Total Hardness (mg L-1)",
+    "Calcium (mg L-1)",
+    "Ammonia (mg L-1)",
+    "Nitrite (mg L-1)",
+    "Phosphorus (mg L-1)",
+    "Hydrogen Sulfide (mg L-1)",
+    "Plankton Count (No. L-1)",
+    "Water Quality Label"
+  ],
+  "target_column": "Aquaculture Suitability Tier",
+  "target_classes": [
+    "Moderate Suitability",
+    "Optimal Suitability",
+    "Reduced Suitability"
+  ],
+  "output_files": {
+    "cleaned": "C:\\Users\\HP\\Desktop\\satria-water-quality-ews\\data\\processed\\aquaculture_cleaned.csv",
+    "train": "C:\\Users\\HP\\Desktop\\satria-water-quality-ews\\data\\processed\\train_preprocessed.csv",
+    "test": "C:\\Users\\HP\\Desktop\\satria-water-quality-ews\\data\\processed\\test_preprocessed.csv",
+    "scaler": "C:\\Users\\HP\\Desktop\\satria-water-quality-ews\\models\\preprocessing\\robust_scaler.joblib",
+    "label_encoder": "C:\\Users\\HP\\Desktop\\satria-water-quality-ews\\models\\preprocessing\\target_label_encoder.joblib"
+  }
+}

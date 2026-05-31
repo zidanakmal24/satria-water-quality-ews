@@ -1,0 +1,32 @@
+{
+  "raw_rows": 4300,
+  "raw_columns": 17,
+  "cleaned_rows": 4300,
+  "cleaned_columns": 17,
+  "duplicate_rows": 0,
+  "missing_total": 0,
+  "numeric_columns": [
+    "Temperature",
+    "Turbidity (cm)",
+    "Dissolved Oxygen (mg/L)",
+    "Biochemical Oxygen Demand (mg/L)",
+    "Carbon Dioxide (CO2)",
+    "pH",
+    "Total Alkalinity (mg L-1)",
+    "Total Hardness (mg L-1)",
+    "Calcium (mg L-1)",
+    "Ammonia (mg L-1)",
+    "Nitrite (mg L-1)",
+    "Phosphorus (mg L-1)",
+    "Hydrogen Sulfide (mg L-1)",
+    "Plankton Count (No. L-1)",
+    "Water Quality Label"
+  ],
+  "target_column": "Aquaculture Suitability Tier",
+  "target_distribution": {
+    "Reduced Suitability": 1500,
+    "Moderate Suitability": 1400,
+    "Optimal Suitability": 1400
+  },
+  "output_dir": "C:\\Users\\HP\\Desktop\\satria-water-quality-ews\\data\\processed\\eda"
+}

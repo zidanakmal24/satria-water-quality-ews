@@ -1,5 +1,5 @@
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
-export const HERO_LOGO_PATH = "/assets/satria-aquaculture-logo.png";
+export const HERO_LOGO_PATH = "/assets/satria-aquaculture-logo.jpeg";
 
 export const predictionFields = [
   ["temperature", "Temperature", 28],
@@ -16,4 +16,15 @@ export const predictionFields = [
   ["phosphorus_mg_l_1", "Phosphorus", 0.3],
   ["hydrogen_sulfide_mg_l_1", "Hydrogen Sulfide", 0.01],
   ["plankton_count_no_l_1", "Plankton Count", 2500],
+] as const;
+
+export const numericParameters = [
+  { key: "temperature", label: "Temperature", unit: "C" },
+  { key: "ph", label: "pH", unit: "" },
+  { key: "dissolved_oxygen_mg_l", label: "Dissolved Oxygen", unit: "mg/L" },
+  { key: "ammonia_mg_l_1", label: "Ammonia", unit: "mg/L" },
+  { key: "nitrite_mg_l_1", label: "Nitrite", unit: "mg/L" },
+  { key: "phosphorus_mg_l_1", label: "Phosphorus", unit: "mg/L" },
+  { key: "total_hardness_mg_l_1", label: "Hardness", unit: "mg/L" },
+  { key: "total_alkalinity_mg_l_1", label: "Alkalinity", unit: "mg/L" },
 ] as const;

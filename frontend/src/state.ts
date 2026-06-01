@@ -8,6 +8,11 @@ export const state: AppState = {
   session: null,
   profile: null,
   latestPrediction: null,
+  modelInfo: null,
   predictionLogs: [],
   edaRows: [],
+  edaMetric: "ph",
+  analyticsMetric: "dissolved_oxygen_mg_l",
+  settingsTab: "profile",
+  reportSearch: "",
 };

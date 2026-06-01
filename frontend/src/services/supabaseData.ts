@@ -36,11 +36,57 @@ export async function saveProfile(session: Session, formData: FormData) {
     updated_at: new Date().toISOString(),
   };
 
-  const { data, error } = await supabase.from("profiles").upsert(updates).select("*").single();
+  const { data, error } = await supabase
+    .from("profiles")
+    .update(updates)
+    .eq("id", session.user.id)
+    .select("*")
+    .maybeSingle();
+
   if (error) throw error;
 
-  await supabase.auth.updateUser({ data: updates });
-  return data as Profile;
+  let saved = data as Profile | null;
+  if (!saved) {
+    const { data: inserted, error: insertError } = await supabase.from("profiles").insert(updates).select("*").single();
+    if (insertError) throw insertError;
+    saved = inserted as Profile;
+  }
+
+  await supabase.auth.updateUser({
+    data: {
+      full_name: updates.full_name,
+      role: updates.role,
+      organization: updates.organization,
+      bio: updates.bio,
+    },
+  });
+  return saved;
+}
+
+export async function saveSecuritySettings(session: Session, formData: FormData) {
+  const fullName = String(formData.get("securityFullName") || "").trim();
+  const password = String(formData.get("newPassword") || "");
+  const confirmPassword = String(formData.get("confirmPassword") || "");
+
+  if (!fullName) throw new Error("Username / nama user wajib diisi.");
+  if (password && password.length < 6) throw new Error("Password minimal 6 karakter.");
+  if (password !== confirmPassword) throw new Error("Konfirmasi password tidak sama.");
+
+  const authUpdates: { password?: string; data: { full_name: string } } = { data: { full_name: fullName } };
+  if (password) authUpdates.password = password;
+
+  const { error: authError } = await supabase.auth.updateUser(authUpdates);
+  if (authError) throw authError;
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({ full_name: fullName, updated_at: new Date().toISOString() })
+    .eq("id", session.user.id)
+    .select("*")
+    .maybeSingle();
+  if (error) throw error;
+
+  return data as Profile | null;
 }
 
 export async function savePredictionLog(

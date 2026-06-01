@@ -27,6 +27,15 @@ for select
 to authenticated
 using (auth.uid() = id);
 
+drop policy if exists "Users can insert own profile"
+on public.profiles;
+
+create policy "Users can insert own profile"
+on public.profiles
+for insert
+to authenticated
+with check (auth.uid() = id);
+
 drop policy if exists "Users can update own profile"
 on public.profiles;
 

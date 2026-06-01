@@ -1,12 +1,13 @@
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { predictionFields } from "./constants";
-import { runPrediction } from "./services/api";
+import { loadModelInfo, runPrediction } from "./services/api";
 import {
   loadEdaRows,
   loadPredictionLogs,
   loadProfile,
   savePredictionLog,
   saveProfile,
+  saveSecuritySettings,
 } from "./services/supabaseData";
 import { supabase } from "./services/supabase";
 import { state } from "./state";
@@ -33,7 +34,33 @@ function bindEvents() {
   document.querySelector("#authForm")?.addEventListener("submit", handleAuthSubmit);
   document.querySelector("#predictionForm")?.addEventListener("submit", handlePredictionSubmit);
   document.querySelector("#profileForm")?.addEventListener("submit", handleProfileSave);
-  document.querySelector("#refreshData")?.addEventListener("click", () => loadRealtimeData().then(render));
+  document.querySelector("#securityForm")?.addEventListener("submit", handleSecuritySave);
+  document.querySelectorAll("#refreshData, [data-refresh]").forEach((element) => {
+    element.addEventListener("click", () => loadRealtimeData().then(render));
+  });
+  document.querySelector("#reportSearch")?.addEventListener("input", (event) => {
+    state.reportSearch = (event.currentTarget as HTMLInputElement).value;
+    render();
+  });
+  document.querySelectorAll<HTMLElement>("[data-settings-tab]").forEach((element) => {
+    element.addEventListener("click", () => {
+      state.settingsTab = element.dataset.settingsTab as typeof state.settingsTab;
+      state.message = "";
+      render();
+    });
+  });
+  document.querySelectorAll<HTMLElement>("[data-chart-group]").forEach((element) => {
+    element.addEventListener("click", () => {
+      const key = element.dataset.chartKey || "ph";
+      if (element.dataset.chartGroup === "eda") {
+        state.edaMetric = key;
+      }
+      if (element.dataset.chartGroup === "analytics") {
+        state.analyticsMetric = key;
+      }
+      render();
+    });
+  });
   document.querySelectorAll<HTMLElement>("[data-page]").forEach((element) => {
     element.addEventListener("click", () => {
       state.currentPage = element.dataset.page as AppPage;
@@ -101,6 +128,12 @@ async function handlePredictionSubmit(event: Event) {
     payload[name] = Number(formData.get(name));
   });
 
+  if (Object.values(payload).some((value) => !Number.isFinite(value))) {
+    state.message = "Semua parameter prediksi harus berupa angka valid.";
+    render();
+    return;
+  }
+
   state.loading = true;
   state.message = "";
   render();
@@ -149,6 +182,26 @@ async function handleProfileSave(event: Event) {
   render();
 }
 
+async function handleSecuritySave(event: Event) {
+  event.preventDefault();
+  if (!state.session) return;
+
+  state.loading = true;
+  state.message = "";
+  render();
+
+  try {
+    const profile = await saveSecuritySettings(state.session, new FormData(event.currentTarget as HTMLFormElement));
+    state.profile = profile || (await loadProfile(state.session));
+    state.message = "Security & Privacy berhasil diperbarui.";
+  } catch (error) {
+    state.message = error instanceof Error ? error.message : "Security & Privacy gagal disimpan.";
+  }
+
+  state.loading = false;
+  render();
+}
+
 async function handleLogout() {
   await supabase.auth.signOut();
   state.session = null;
@@ -161,6 +214,7 @@ async function handleLogout() {
 
 async function refreshUserData() {
   state.profile = await loadProfile(state.session);
+  state.modelInfo = await loadModelInfo();
   await loadRealtimeData();
 }
 

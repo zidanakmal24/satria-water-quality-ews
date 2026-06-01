@@ -1,8 +1,16 @@
-import { HERO_LOGO_PATH, predictionFields } from "../constants";
+import { HERO_LOGO_PATH, numericParameters, predictionFields } from "../constants";
 import type { AppPage, AppState, PredictionLog } from "../types";
 import { computeEdaStats } from "../utils/eda";
 import { escapeAttribute, escapeHtml, formatDate, formatNumber, getDisplayName, getInitials, statusClass } from "../utils/format";
-import { renderBarChart, renderBoxplotLike, renderDonut, renderHeatmap, renderLineChart } from "./charts";
+import {
+  renderBarChart,
+  renderBoxplotLike,
+  renderDonut,
+  renderHeatmap,
+  renderHistogram,
+  renderLineChart,
+  renderMetricTabs,
+} from "./charts";
 
 export function renderApp(state: AppState) {
   return state.session ? renderPlatform(state) : renderAuthPage(state);
@@ -131,13 +139,13 @@ function renderMetricCard(label: string, value: string, detail: string, icon: st
 
 function renderCapabilities() {
   const items = [
-    ["Predictive Modelling", "Input pond parameters manually or sync via IoT to receive instant quality classifications.", "Get Started"],
-    ["Real-time Dashboard", "Monitor DO, pH, and Temperature trends across multiple ponds in a single dynamic view.", "View Charts"],
-    ["Digital Logbooks", "Manage records of water quality tests, maintenance, and system alerts.", "Manage Logs"],
-    ["Scientific EDA", "Deep dive into data distributions, correlations, and outliers.", "Dive Deep"],
+    ["Predictive Modelling", "Input pond parameters manually or sync via IoT to receive instant quality classifications.", "Get Started", "prediction"],
+    ["Real-time Dashboard", "Monitor DO, pH, Nitrite, and Temperature trends across Supabase records.", "View Charts", "analytics"],
+    ["Digital Logbooks", "Manage records of water quality tests, maintenance, and system alerts.", "Manage Logs", "reports"],
+    ["Scientific EDA", "Deep dive into data distributions, correlations, and outliers.", "Dive Deep", "eda"],
   ];
 
-  return `<section class="capabilities"><h2>Ecosystem Capabilities</h2><p>Explore our suite of intelligent tools designed specifically for modern industrial aquaculture.</p><div class="capability-grid">${items.map(([title, body, action]) => `<article><span>${title[0]}</span><h3>${title}</h3><p>${body}</p><button type="button" disabled>${action} ></button></article>`).join("")}</div></section>`;
+  return `<section class="capabilities"><h2>Ecosystem Capabilities</h2><p>Explore our suite of intelligent tools designed specifically for modern industrial aquaculture.</p><div class="capability-grid">${items.map(([title, body, action, page]) => `<article><span>${title[0]}</span><h3>${title}</h3><p>${body}</p><button type="button" data-page="${page}">${action} ></button></article>`).join("")}</div></section>`;
 }
 
 function renderHomeFooter() {
@@ -155,9 +163,16 @@ function renderHomeFooter() {
 }
 
 function renderPredictionPage(state: AppState) {
+  const accuracy = state.modelInfo?.metrics?.accuracy;
+  const modelName = state.modelInfo?.model_name || "LightGBM";
   return `
     <section class="work-page prediction-page">
       <div class="page-heading"><h1>Manual Parameter Input</h1><p>Enter current water quality metrics to get a real-time health classification from the LightGBM model.</p></div>
+      <div class="model-strip">
+        <div><span>Active Model</span><strong>${escapeHtml(modelName.toUpperCase())}</strong></div>
+        <div><span>Training Accuracy</span><strong>${accuracy ? `${(accuracy * 100).toFixed(2)}%` : "99.77%"}</strong></div>
+        <div><span>Input Features</span><strong>${state.modelInfo?.features?.length || predictionFields.length}</strong></div>
+      </div>
       <div class="prediction-layout">
         <form class="prediction-form" id="predictionForm"><div class="parameter-grid">${predictionFields.map(([name, label, value]) => `<label><span>${label}</span><input name="${name}" type="number" step="any" value="${value}" required /></label>`).join("")}</div><button class="execute-button" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? "Running..." : "Execute ML Model Prediction"}</button></form>
         <aside class="result-panel">${state.latestPrediction ? renderPredictionResult(state) : `<div class="empty-result"><strong>Results will appear here</strong><span>after calculation</span></div>`}</aside>
@@ -174,21 +189,30 @@ function renderPredictionResult(state: AppState) {
 
 function renderAnalyticsPage(state: AppState) {
   const stats = computeEdaStats(state.edaRows);
-  return `<section class="work-page"><div class="page-heading row-heading"><div><h1>Real-time Insights Dashboard</h1><p>Global telemetry view of Supabase aquaculture records.</p></div><button class="refresh-button" id="refreshData" type="button">Refresh</button></div><div class="insight-strip"><div><span>Total Sensors</span><strong>12</strong></div><div><span>Avg pH</span><strong>${stats.avgPh.toFixed(2)}</strong></div><div><span>Rows</span><strong>${formatNumber(stats.rows)}</strong></div></div><div class="analytics-grid"><article class="chart-card wide"><h2>Water Quality Trends (DO & Temperature)</h2>${renderLineChart()}</article><article class="chart-card"><h2>Status Classes</h2>${renderDonut()}</article><article class="chart-card"><h2>Pond Ammonia Levels</h2>${renderBarChart()}</article><article class="chart-card"><h2>Parameter Correlation</h2>${renderHeatmap()}</article></div></section>`;
+  const active = numericParameters.find((item) => item.key === state.analyticsMetric);
+  return `<section class="work-page"><div class="page-heading row-heading"><div><h1>Real-time Insights Dashboard</h1><p>Global telemetry view of Supabase aquaculture records. Klik nama parameter untuk mengganti visualisasi.</p></div><button class="refresh-button" id="refreshData" type="button">Refresh</button></div><div class="insight-strip"><div><span>Dataset Rows</span><strong>${formatNumber(stats.rows)}</strong></div><div><span>Avg pH</span><strong>${stats.avgPh.toFixed(2)}</strong></div><div><span>Avg Nitrite</span><strong>${stats.nitriteMean.toFixed(3)}</strong></div><div><span>Prediction Logs</span><strong>${formatNumber(state.predictionLogs.length)}</strong></div></div><div class="analytics-grid"><article class="chart-card wide"><div class="chart-heading"><div><h2>Water Quality Trends: ${escapeHtml(active?.label || "Parameter")}</h2><p>Sampling dari table water_quality_clean Supabase.</p></div>${renderMetricTabs(state.analyticsMetric, "analytics")}</div>${renderLineChart(state.edaRows, state.analyticsMetric, "temperature")}</article><article class="chart-card"><h2>Status Classes</h2>${renderDonut(state.predictionLogs)}</article><article class="chart-card"><h2>${escapeHtml(active?.label || "Parameter")} Levels</h2>${renderBarChart(state.edaRows, state.analyticsMetric)}</article><article class="chart-card"><h2>Nitrite Levels</h2>${renderBarChart(state.edaRows, "nitrite_mg_l_1")}</article><article class="chart-card wide"><h2>Parameter Correlation</h2><p class="chart-caption">Nilai 1.00 berarti hubungan searah kuat, -1.00 berlawanan kuat, 0.00 lemah.</p>${renderHeatmap(state.edaRows)}</article></div></section>`;
 }
 
 function renderReportsPage(state: AppState) {
-  return `<section class="work-page"><div class="page-heading row-heading"><div><h1>Historical Log Reports</h1><p>Comprehensive archive of your prediction history and ML classifications.</p></div><button class="refresh-button" id="refreshData" type="button">Refresh Logs</button></div><div class="report-toolbar"><input id="reportSearch" placeholder="Search by status..." /><button disabled>All Ponds</button><button disabled>Sort by Date (Newest)</button></div><div class="table-wrap"><table class="log-table"><thead><tr><th>Timestamp</th><th>User</th><th>Parameters (pH/Temp/DO)</th><th>Status</th><th>Actions</th></tr></thead><tbody>${renderReportRows(state)}</tbody></table></div><footer class="reports-footer">Showing ${state.predictionLogs.length} entries from Supabase prediction_results.</footer></section>`;
+  return `<section class="work-page"><div class="page-heading row-heading"><div><h1>Historical Log Reports</h1><p>Comprehensive archive of your prediction history and ML classifications.</p></div><button class="refresh-button" id="refreshData" type="button">Refresh Logs</button></div><div class="report-toolbar"><input id="reportSearch" placeholder="Search by status..." value="${escapeAttribute(state.reportSearch)}" /><button type="button" data-refresh>Sync Supabase</button><button type="button" disabled>Sort by Date (Newest)</button></div><div class="table-wrap"><table class="log-table"><thead><tr><th>Timestamp</th><th>User</th><th>Parameters (pH/Temp/DO)</th><th>Status</th><th>Actions</th></tr></thead><tbody>${renderReportRows(state)}</tbody></table></div><footer class="reports-footer">Showing ${filteredLogs(state).length} of ${state.predictionLogs.length} entries from Supabase prediction_results.</footer></section>`;
 }
 
 function renderReportRows(state: AppState) {
-  if (!state.predictionLogs.length) return `<tr><td colspan="5" class="empty-table">Belum ada log prediksi untuk user ini.</td></tr>`;
-  return state.predictionLogs.map((row) => `<tr><td>${formatDate(row.created_at)}</td><td>${escapeHtml(state.profile?.full_name || "Current User")}</td><td><span class="pill">${Number(row.input_data?.ph || 0).toFixed(1)}</span><span class="pill">${Number(row.input_data?.temperature || 0).toFixed(1)} C</span><span class="pill">${Number(row.input_data?.dissolved_oxygen_mg_l || 0).toFixed(1)} mg/L</span></td><td><span class="status-pill ${statusClass(row.predicted_suitability_tier)}">${escapeHtml(row.predicted_suitability_tier)}</span></td><td><button disabled>View</button></td></tr>`).join("");
+  const rows = filteredLogs(state);
+  if (!rows.length) return `<tr><td colspan="5" class="empty-table">Belum ada log prediksi yang cocok.</td></tr>`;
+  return rows.map((row) => `<tr><td>${formatDate(row.created_at)}</td><td>${escapeHtml(state.profile?.full_name || "Current User")}</td><td><span class="pill">${Number(row.input_data?.ph || 0).toFixed(1)}</span><span class="pill">${Number(row.input_data?.temperature || 0).toFixed(1)} C</span><span class="pill">${Number(row.input_data?.dissolved_oxygen_mg_l || 0).toFixed(1)} mg/L</span></td><td><span class="status-pill ${statusClass(row.predicted_suitability_tier)}">${escapeHtml(row.predicted_suitability_tier)}</span></td><td><button type="button" title="Stored in Supabase">Synced</button></td></tr>`).join("");
+}
+
+function filteredLogs(state: AppState) {
+  const term = state.reportSearch.trim().toLowerCase();
+  if (!term) return state.predictionLogs;
+  return state.predictionLogs.filter((row) => row.predicted_suitability_tier.toLowerCase().includes(term));
 }
 
 function renderEdaPage(state: AppState) {
   const stats = computeEdaStats(state.edaRows);
-  return `<section class="work-page"><div class="page-heading row-heading"><div><h1>Exploratory Data Analysis</h1><p>Realtime statistical breakdown from Supabase table water_quality_clean.</p></div><button class="refresh-button" id="refreshData" type="button">Refresh EDA</button></div><div class="eda-summary-grid"><article><span>Total Sample Size</span><strong>${formatNumber(stats.rows)}</strong><p>Supabase rows loaded</p></article><article><span>Features Extracted</span><strong>${stats.features}</strong><p>Chemical and physical variables</p></article><article><span>Missing Values</span><strong>${stats.missingPct.toFixed(2)}%</strong><p>Calculated in browser</p></article></div><div class="eda-grid"><article class="stats-table"><h2>Descriptive Statistics</h2>${renderStatsTable(state)}</article><article class="chart-card wide"><h2>Parameter Distributions</h2>${renderLineChart()}</article><article class="chart-card box-wide"><h2>Outlier Analysis</h2>${renderBoxplotLike()}</article></div></section>`;
+  const active = numericParameters.find((item) => item.key === state.edaMetric);
+  return `<section class="work-page"><div class="page-heading row-heading"><div><h1>Exploratory Data Analysis</h1><p>Realtime statistical breakdown from Supabase table water_quality_clean. Pilih parameter untuk melihat distribusi dan outlier.</p></div><button class="refresh-button" id="refreshData" type="button">Refresh EDA</button></div><div class="eda-summary-grid"><article><span>Total Sample Size</span><strong>${formatNumber(stats.rows)}</strong><p>Supabase rows loaded</p></article><article><span>Features Extracted</span><strong>${stats.features}</strong><p>Chemical and physical variables</p></article><article><span>Missing Values</span><strong>${stats.missingPct.toFixed(2)}%</strong><p>Calculated in browser</p></article></div><div class="eda-grid"><article class="stats-table"><h2>Descriptive Statistics</h2>${renderStatsTable(state)}</article><article class="chart-card wide"><div class="chart-heading"><h2>${escapeHtml(active?.label || "Parameter")} Distribution</h2>${renderMetricTabs(state.edaMetric, "eda")}</div>${renderHistogram(state.edaRows, state.edaMetric)}</article><article class="chart-card box-wide"><h2>Outlier Analysis</h2>${renderBoxplotLike(state.edaRows, state.edaMetric)}</article></div></section>`;
 }
 
 function renderStatsTable(state: AppState) {
@@ -210,7 +234,15 @@ function renderSettingsPage(state: AppState) {
   const organization = state.profile?.organization || "SATRIA Research";
   const bio = state.profile?.bio || "Focusing on shrimp pond optimization through advanced environment telemetry and machine learning intervention.";
 
-  return `<section class="settings-page"><header class="profile-header"><div class="avatar">${escapeHtml(getInitials(fullName) || "S")}</div><div><h1>${escapeHtml(fullName)}</h1><p>${escapeHtml(role)} & Lead Researcher</p><div class="profile-tags"><span>System Admin</span><span>${escapeHtml(organization)}</span></div></div></header><div class="settings-layout"><aside class="settings-sidebar"><button class="active">Profile Details</button><button disabled>Security & Privacy</button><button id="logoutButton" class="danger" type="button">Sign Out</button><div class="note-card"><strong>Security & Privacy</strong><p>Profile user aktif tersimpan di Supabase table profiles.</p></div></aside><form class="profile-card" id="profileForm"><h2>Profile Configuration</h2><div class="profile-form-grid"><label><span>Full Name</span><input name="fullName" value="${escapeAttribute(fullName)}" required /></label><label><span>Email Address</span><input value="${escapeAttribute(email)}" disabled /></label><label><span>Role</span><input name="role" value="${escapeAttribute(role)}" required /></label><label><span>Organization</span><input name="organization" value="${escapeAttribute(organization)}" required /></label><label class="wide"><span>Bio / Research Focus</span><textarea name="bio" rows="5">${escapeHtml(bio)}</textarea></label></div><button class="save-button" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? "Saving..." : "Save Profile Changes"}</button>${state.message ? `<div class="message settings-message">${state.message}</div>` : ""}</form></div><footer class="settings-footer">SATRIA v0.1-STABLE | Last logged in: ${new Date().toLocaleString()}</footer></section>`;
+  return `<section class="settings-page"><header class="profile-header"><div class="avatar">${escapeHtml(getInitials(fullName) || "S")}</div><div><h1>${escapeHtml(fullName)}</h1><p>${escapeHtml(role)} & Lead Researcher</p><div class="profile-tags"><span>System Admin</span><span>${escapeHtml(organization)}</span></div></div></header><div class="settings-layout"><aside class="settings-sidebar"><button class="${state.settingsTab === "profile" ? "active" : ""}" type="button" data-settings-tab="profile">Profile Details</button><button class="${state.settingsTab === "security" ? "active" : ""}" type="button" data-settings-tab="security">Security & Privacy</button><button id="logoutButton" class="danger" type="button">Sign Out</button><div class="note-card"><strong>Account Storage</strong><p>Profile tersimpan di Supabase profiles, username/password lewat Supabase Auth.</p></div></aside>${state.settingsTab === "security" ? renderSecurityPanel(state, fullName, email) : renderProfilePanel(state, fullName, email, role, organization, bio)}</div><footer class="settings-footer">SATRIA v0.1-STABLE | Last logged in: ${new Date().toLocaleString()}</footer></section>`;
+}
+
+function renderProfilePanel(state: AppState, fullName: string, email: string, role: string, organization: string, bio: string) {
+  return `<form class="profile-card" id="profileForm"><h2>Profile Configuration</h2><div class="profile-form-grid"><label><span>Full Name</span><input name="fullName" value="${escapeAttribute(fullName)}" required /></label><label><span>Email Address</span><input value="${escapeAttribute(email)}" disabled /></label><label><span>Role</span><input name="role" value="${escapeAttribute(role)}" required /></label><label><span>Organization</span><input name="organization" value="${escapeAttribute(organization)}" required /></label><label class="wide"><span>Bio / Research Focus</span><textarea name="bio" rows="5">${escapeHtml(bio)}</textarea></label></div><button class="save-button" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? "Saving..." : "Save Profile Changes"}</button>${state.message ? `<div class="message settings-message">${state.message}</div>` : ""}</form>`;
+}
+
+function renderSecurityPanel(state: AppState, fullName: string, email: string) {
+  return `<form class="profile-card" id="securityForm"><h2>Security & Privacy</h2><div class="profile-form-grid"><label><span>Username / Display Name</span><input name="securityFullName" value="${escapeAttribute(fullName)}" required /></label><label><span>Login Email</span><input value="${escapeAttribute(email)}" disabled /></label><label><span>New Password</span><input name="newPassword" type="password" minlength="6" placeholder="Kosongkan jika tidak diganti" /></label><label><span>Confirm Password</span><input name="confirmPassword" type="password" minlength="6" placeholder="Ulangi password baru" /></label><label class="wide privacy-check"><input type="checkbox" checked /><span>Allow SATRIA to show my name on prediction reports for this account.</span></label></div><button class="save-button" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? "Saving..." : "Save Security"}</button>${state.message ? `<div class="message settings-message">${state.message}</div>` : ""}</form>`;
 }
 
 function renderRecentList(rows: PredictionLog[], state: AppState) {

@@ -21,3 +21,12 @@ create table if not exists public.water_quality_clean (
 );
 
 alter table public.water_quality_clean enable row level security;
+
+drop policy if exists "Authenticated users can read clean water quality data"
+on public.water_quality_clean;
+
+create policy "Authenticated users can read clean water quality data"
+on public.water_quality_clean
+for select
+to authenticated
+using (true);

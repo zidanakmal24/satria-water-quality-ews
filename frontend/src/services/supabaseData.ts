@@ -10,7 +10,7 @@ export async function loadProfile(session: Session | null) {
     id: user.id,
     email: user.email || null,
     full_name: user.user_metadata?.full_name || "SATRIA User",
-    role: user.user_metadata?.role || "Aquaculture Engineer",
+    role: user.user_metadata?.role || "",
     organization: user.user_metadata?.organization || "SATRIA Research",
     bio: user.user_metadata?.bio || "",
     avatar_url: null,

@@ -33,6 +33,7 @@ function bindEvents() {
   document.querySelector("#logoutButton")?.addEventListener("click", handleLogout);
   document.querySelector("#authForm")?.addEventListener("submit", handleAuthSubmit);
   document.querySelector("#predictionForm")?.addEventListener("submit", handlePredictionSubmit);
+  document.querySelector("#predictionForm")?.addEventListener("input", handlePredictionFormInput);
   document.querySelector("#bulkPredictionFile")?.addEventListener("change", handleBulkPredictionUpload);
   document.querySelector("#downloadReportsCsv")?.addEventListener("click", handleDownloadReportsCsv);
   document.querySelector("#profileForm")?.addEventListener("submit", handleProfileSave);
@@ -69,6 +70,13 @@ function bindEvents() {
       state.message = "";
       if (!state.session && state.currentPage !== "home") {
         state.authMode = "login";
+        render();
+        return;
+      }
+      if (state.session && !isProfileComplete() && !["home", "settings"].includes(state.currentPage)) {
+        state.currentPage = "settings";
+        state.settingsTab = "profile";
+        state.message = "Lengkapi role dan bio profil sebelum mengakses fitur utama.";
         render();
         return;
       }
@@ -165,6 +173,20 @@ async function handlePredictionSubmit(event: Event) {
   render();
 }
 
+function handlePredictionFormInput(event: Event) {
+  const form = event.currentTarget as HTMLFormElement;
+  const submitButton = form.querySelector<HTMLButtonElement>("#executePrediction");
+  const inputs = Array.from(form.querySelectorAll<HTMLInputElement>("input[type='number']"));
+  const allValid = inputs.every((input) => {
+    const value = input.value.trim();
+    const valid = value !== "" && Number.isFinite(Number(value));
+    input.classList.toggle("input-invalid", !valid);
+    input.closest("label")?.querySelector(".input-error")?.classList.toggle("is-visible", !valid);
+    return valid;
+  });
+  if (submitButton) submitButton.disabled = !allValid || state.loading;
+}
+
 async function handleBulkPredictionUpload(event: Event) {
   const input = event.currentTarget as HTMLInputElement;
   const file = input.files?.[0];
@@ -252,13 +274,25 @@ async function handleProfileSave(event: Event) {
   event.preventDefault();
   if (!state.session) return;
 
+  const formData = new FormData(event.currentTarget as HTMLFormElement);
+  const role = String(formData.get("role") || "").trim();
+  const bio = String(formData.get("bio") || "").trim();
+  if (!role || !bio) {
+    state.message = "Role dan Bio wajib diisi sebelum mengakses fitur utama.";
+    render();
+    return;
+  }
+
   state.loading = true;
   state.message = "";
   render();
 
   try {
-    state.profile = await saveProfile(state.session, new FormData(event.currentTarget as HTMLFormElement));
+    state.profile = await saveProfile(state.session, formData);
     state.message = "Profile berhasil disimpan ke Supabase.";
+    if (isProfileComplete()) {
+      state.currentPage = "prediction";
+    }
   } catch (error) {
     state.message = error instanceof Error ? error.message : "Profile gagal disimpan.";
   }
@@ -301,6 +335,15 @@ async function refreshUserData() {
   state.profile = await loadProfile(state.session);
   state.modelInfo = await loadModelInfo();
   await loadRealtimeData();
+  if (state.session && !isProfileComplete()) {
+    state.currentPage = "settings";
+    state.settingsTab = "profile";
+    state.message = "Lengkapi role dan bio profil sebelum menggunakan fitur utama.";
+  }
+}
+
+function isProfileComplete() {
+  return Boolean(state.profile?.role?.trim() && state.profile?.bio?.trim());
 }
 
 async function loadRealtimeData() {

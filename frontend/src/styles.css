@@ -789,14 +789,27 @@ button:disabled {
   display: grid;
   gap: 10px;
   color: #475467;
-  font-weight: 900;
+  font-weight: 500;
 }
 
 .parameter-grid small {
   color: #728196;
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 400;
   line-height: 1.45;
+}
+
+.input-error {
+  display: none;
+  color: #d92d20;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+.input-error.is-visible {
+  display: block;
 }
 
 .parameter-grid input,
@@ -809,7 +822,12 @@ button:disabled {
   background: #ffffff;
   color: #243244;
   outline: 0;
-  font-weight: 800;
+  font-weight: 400;
+}
+
+.parameter-grid input.input-invalid {
+  border-color: #d92d20;
+  box-shadow: 0 0 0 3px rgba(217, 45, 32, 0.08);
 }
 
 .parameter-grid input,

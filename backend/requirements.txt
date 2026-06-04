@@ -6,3 +6,7 @@ scikit-learn
 lightgbm
 joblib
 requests
+mlflow
+matplotlib
+seaborn
+numpy

@@ -7,12 +7,8 @@ from pathlib import Path
 import joblib
 import pandas as pd
 
-try:
-    from backend.model.preprocessing import TARGET_COLUMN, clean_data, read_raw_data
-    from backend.model.train import MODEL_PATH
-except ModuleNotFoundError:
-    from preprocessing import TARGET_COLUMN, clean_data, read_raw_data
-    from train import MODEL_PATH
+from .preprocessing import TARGET_COLUMN, clean_data, read_raw_data
+from .train import MODEL_PATH
 
 
 def load_model_bundle(model_path: Path = MODEL_PATH) -> dict:

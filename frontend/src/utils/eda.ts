@@ -1,86 +1,6 @@
-import type { Session } from "@supabase/supabase-js";
+import type { EdaRecord } from "../types";
 
-export type AuthMode = "login" | "register";
-export type AppPage = "home" | "login" | "prediction" | "analytics" | "reports" | "eda" | "settings";
-export type SettingsTab = "profile" | "security" | "privacy";
-
-export type Profile = {
-  id: string;
-  email: string | null;
-  full_name: string | null;
-  role: string | null;
-  organization: string | null;
-  bio: string | null;
-  avatar_url: string | null;
-};
-
-export type PredictionResult = {
-  predicted_class_id: number;
-  predicted_suitability_tier: string;
-  probabilities: Record<string, number>;
-};
-
-export type ModelInfo = {
-  model_name?: string;
-  features?: string[];
-  classes?: string[];
-  metrics?: Record<string, number>;
-};
-
-export type PredictionLog = {
-  id: number;
-  created_at: string;
-  user_id: string | null;
-  input_data: Record<string, number>;
-  predicted_suitability_tier: string;
-  probabilities: Record<string, number> | null;
-};
-
-export type EdaRecord = Record<string, string | number | null | undefined>;
-
-// ─── EDA derived types ────────────────────────────────────────────────────────
-
-export type DataShape = {
-  rows: number;
-  cols: number;
-  columns: string[];
-};
-
-export type NullInfo = {
-  column: string;
-  nullCount: number;
-  nullPct: number;
-};
-
-export type ColumnTypeSummary = {
-  column: string;
-  inferredType: "numeric" | "categorical" | "boolean" | "mixed" | "empty";
-  uniqueCount: number;
-};
-
-export type ColumnStats = {
-  column: string;
-  count: number;
-  mean: number;
-  median: number;
-  std: number;
-  min: number;
-  max: number;
-  q1: number;
-  q3: number;
-};
-
-export type OutlierInfo = {
-  column: string;
-  lowerFence: number;
-  upperFence: number;
-  outlierCount: number;
-  outlierPct: number;
-  outlierIndices: number[];
-};
-
-export type EdaStats = {
-  // summary scalars (legacy-compatible)
+export type ComputedEdaStats = {
   rows: number;
   features: number;
   missingPct: number;
@@ -89,37 +9,99 @@ export type EdaStats = {
   doMean: number;
   ammoniaMean: number;
   nitriteMean: number;
-
-  // structured EDA
-  shape: DataShape;
-  head: EdaRecord[];
-  tail: EdaRecord[];
-  nullInfo: NullInfo[];
-  totalNullCount: number;
-  totalNullPct: number;
-  columnTypes: ColumnTypeSummary[];
-  numericStats: ColumnStats[];
-  outliers: OutlierInfo[];
 };
 
-// ─── App state ────────────────────────────────────────────────────────────────
+function mean(values: number[]): number {
+  return values.length
+    ? values.reduce((a, b) => a + b, 0) / values.length
+    : 0;
+}
 
-export type AppState = {
-  authMode: AuthMode;
-  currentPage: AppPage;
-  loading: boolean;
-  message: string;
-  session: Session | null;
-  profile: Profile | null;
-  latestPrediction: PredictionResult | null;
-  modelInfo: ModelInfo | null;
-  predictionLogs: PredictionLog[];
-  edaStats: EdaStats | null;       // replaces edaRows + edaTotalRows
-  edaLoading: boolean;
-  userRiskCount: number;
-  realtimeConnected: boolean;
-  edaMetric: string;
-  analyticsMetric: string;
-  settingsTab: SettingsTab;
-  reportSearch: string;
-};
+function getNumericColumn(
+  rows: EdaRecord[],
+  candidates: string[]
+): number[] {
+  const values: number[] = [];
+
+  for (const row of rows) {
+    for (const key of candidates) {
+      if (!(key in row)) continue;
+
+      const num = Number(row[key]);
+
+      if (Number.isFinite(num)) {
+        values.push(num);
+      }
+
+      break;
+    }
+  }
+
+  return values;
+}
+
+export function computeEdaStats(
+  rows: EdaRecord[]
+): ComputedEdaStats {
+  const columns =
+    rows.length > 0 ? Object.keys(rows[0]) : [];
+
+  let missing = 0;
+
+  rows.forEach((row) => {
+    Object.values(row).forEach((value) => {
+      if (
+        value === null ||
+        value === undefined ||
+        value === ""
+      ) {
+        missing++;
+      }
+    });
+  });
+
+  const totalCells =
+    rows.length * Math.max(columns.length, 1);
+
+  return {
+    rows: rows.length,
+    features: columns.length,
+
+    missingPct:
+      totalCells === 0
+        ? 0
+        : (missing / totalCells) * 100,
+
+    avgPh: mean(
+      getNumericColumn(rows, ["ph", "pH"])
+    ),
+
+    tempMean: mean(
+      getNumericColumn(rows, [
+        "temperature",
+        "temperature_c",
+      ])
+    ),
+
+    doMean: mean(
+      getNumericColumn(rows, [
+        "do",
+        "dissolved_oxygen_mg_l",
+      ])
+    ),
+
+    ammoniaMean: mean(
+      getNumericColumn(rows, [
+        "ammonia",
+        "ammonia_mg_l",
+      ])
+    ),
+
+    nitriteMean: mean(
+      getNumericColumn(rows, [
+        "nitrite",
+        "nitrite_mg_l",
+      ])
+    ),
+  };
+}

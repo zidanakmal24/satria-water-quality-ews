@@ -24,7 +24,7 @@ if (!app) {
 }
 
 function render() {
-  app.innerHTML = renderApp(state);
+  app!.innerHTML = renderApp(state);
   bindEvents();
 }
 

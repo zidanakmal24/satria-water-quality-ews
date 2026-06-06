@@ -57,7 +57,7 @@ services:
       - ML_SERVICE_URL=http://ml-service:8001
       - DATA_SERVICE_URL=http://data-service:8002
       - SUPABASE_URL=${SUPABASE_URL:-}
-      - SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY:-}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-}
     networks:
       - satria_network
     depends_on:

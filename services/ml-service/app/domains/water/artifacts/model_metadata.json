@@ -1,0 +1,24 @@
+{
+    "classes": [
+        "Moderate Suitability",
+        "Optimal Suitability",
+        "Reduced Suitability"
+    ],
+    "features": [
+        "Temperature",
+        "Turbidity (cm)",
+        "Dissolved Oxygen (mg/L)",
+        "Biochemical Oxygen Demand (mg/L)",
+        "Carbon Dioxide (CO2)",
+        "pH",
+        "Total Alkalinity (mg L-1)",
+        "Total Hardness (mg L-1)",
+        "Calcium (mg L-1)",
+        "Ammonia (mg L-1)",
+        "Nitrite (mg L-1)",
+        "Phosphorus (mg L-1)",
+        "Hydrogen Sulfide (mg L-1)",
+        "Plankton Count (No. L-1)"
+    ],
+    "target_column": "Aquaculture Suitability Tier"
+}

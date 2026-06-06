@@ -1,28 +1,72 @@
+version: '3.8'
+
 services:
-  backend:
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.10.2
+    container_name: satria_mlflow
+    ports:
+      - "5000:5000"
+    command: >
+      mlflow server
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --default-artifact-root /mlflow/artifacts
+      --host 0.0.0.0
+    volumes:
+      - mlflow_data:/mlflow
+    networks:
+      - satria_network
+
+  # Data Service
+  data-service:
     build:
-      context: .
-      dockerfile: backend/Dockerfile
-    env_file:
-      - .env
+      context: ./services/data-service
+    container_name: satria_data_service
+    ports:
+      - "8002:8002"
+    environment:
+      - SUPABASE_URL=${VITE_SUPABASE_URL:-}
+      - SUPABASE_KEY=${VITE_SUPABASE_ANON_KEY:-}
+      # Nanti kita bisa gunakan service_role key untuk backend
+    networks:
+      - satria_network
+    depends_on:
+      - mlflow
+
+  # ML Service
+  ml-service:
+    build:
+      context: ./services/ml-service
+    container_name: satria_ml_service
+    ports:
+      - "8001:8001"
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    networks:
+      - satria_network
+    depends_on:
+      - mlflow
+
+  # API Service (Gateway)
+  api-service:
+    build:
+      context: ./services/api-service
+    container_name: satria_api_service
     ports:
       - "8000:8000"
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=10)"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-
-  frontend:
-    build:
-      context: .
-      dockerfile: frontend/Dockerfile
-      args:
-        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
-        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://127.0.0.1:8000}
+    environment:
+      - ML_SERVICE_URL=http://ml-service:8001
+      - DATA_SERVICE_URL=http://data-service:8002
+      - SUPABASE_URL=${VITE_SUPABASE_URL:-}
+      - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET:-}
+    networks:
+      - satria_network
     depends_on:
-      - backend
-    ports:
-      - "5173:80"
+      - ml-service
+      - data-service
+
+networks:
+  satria_network:
+    driver: bridge
+
+volumes:
+  mlflow_data:

@@ -18,23 +18,50 @@ def download_production_model():
     
     print(f"Mengambil info model '{model_name}' dari registry di {tracking_uri}...")
     
+    version_to_use = None
+    
     try:
-        # Dapatkan versi model terbaru (mencakup Production, Staging, atau None)
-        versions = client.get_latest_versions(model_name, stages=["Production", "Staging", "None"])
+        # 1. Coba gunakan Alias 'champion' (Best Practice Modern MLflow >= 2.0)
+        try:
+            alias_info = client.get_model_version_by_alias(model_name, "champion")
+            version_to_use = alias_info
+            print(f"[-] Model ditemukan menggunakan Alias: 'champion' (Versi {alias_info.version})")
+        except Exception:
+            pass
+            
+        # 2. Fallback: Cari di Stage 'Production' (Best Practice MLflow Klasik)
+        if not version_to_use:
+            prod_versions = client.get_latest_versions(model_name, stages=["Production"])
+            if prod_versions:
+                version_to_use = prod_versions[0]
+                print(f"[-] Model ditemukan di Stage: 'Production' (Versi {version_to_use.version})")
+                
+        # 3. Fallback: Cari di Stage 'Staging'
+        if not version_to_use:
+            staging_versions = client.get_latest_versions(model_name, stages=["Staging"])
+            if staging_versions:
+                version_to_use = staging_versions[0]
+                print(f"[!] Tidak ada Production/Champion. Fallback ke Stage: 'Staging' (Versi {version_to_use.version})")
+
+        # 4. Fallback Terakhir: Ambil versi absolut tertinggi (None/Bebas)
+        if not version_to_use:
+            all_versions = client.get_latest_versions(model_name, stages=["Production", "Staging", "None"])
+            if all_versions:
+                version_to_use = max(all_versions, key=lambda v: int(v.version))
+                print(f"[!] Menggunakan Fallback Darurat: Versi terbaru absolut (Versi {version_to_use.version}, belum di-approve)")
+                
     except Exception as e:
         print(f"Error saat menghubungi MLflow Server atau mencari model: {e}")
         print("Pastikan MLflow Server berjalan dan model sudah di-register.")
         raise e
         
-    if not versions:
+    if not version_to_use:
         raise ValueError(f"Model '{model_name}' tidak ditemukan di registry. Pastikan skrip training sudah dijalankan.")
     
-    # Pilih versi terbaru berdasarkan version number
-    latest_version_info = max(versions, key=lambda v: int(v.version))
-    run_id = latest_version_info.run_id
-    version = latest_version_info.version
+    run_id = version_to_use.run_id
+    version = version_to_use.version
     
-    print(f"Menggunakan Model Version {version} dari Run ID {run_id}")
+    print(f"\n=> MENYIAPKAN MODEL VERSION {version} (Run ID: {run_id})")
     
     # 1. Download Model Pipeline (.pkl)
     # Model disimpan sebagai flavor sklearn di path 'best_pipeline'

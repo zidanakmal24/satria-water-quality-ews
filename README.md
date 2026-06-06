@@ -1,6 +1,6 @@
 # SATRIA Water Quality EWS
 
-SATRIA adalah aplikasi Early Warning System untuk klasifikasi kualitas air akuakultur. Sistem ini menggabungkan dataset kualitas air, model machine learning, FastAPI backend, Supabase, dan dashboard frontend untuk membantu membaca kondisi air, menjalankan prediksi, melihat analytics, EDA, serta riwayat prediction logs.
+SATRIA adalah aplikasi *Early Warning System* untuk klasifikasi kelayakan kualitas air akuakultur. Sistem ini dibangun dengan arsitektur **Microservices** yang menggabungkan model Machine Learning (dengan MLOps/MLflow), ekosistem backend terdistribusi (API Gateway, ML Service, Data Service) berbasis FastAPI, Supabase (Database & Auth terpusat), serta *dashboard* interaktif frontend React (Vite) untuk memantau metrik kualitas air, menjalankan prediksi EWS secara otomatis maupun manual, visualisasi analitik, *Exploratory Data Analysis* (EDA), dan merekam log prediksi waktu nyata.
 
 ## 🚀 Arsitektur Sistem (Microservices)
 

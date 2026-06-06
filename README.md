@@ -1,6 +1,6 @@
-# SATRIA Water Quality Assessment Tool
+# SATRIA Water Quality EWS
 
-SATRIA adalah sistem cerdas untuk klasifikasi kelayakan kualitas air akuakultur. Sistem ini dibangun dengan arsitektur **Microservices** yang modern, menggabungkan model Machine Learning (LightGBM), FastAPI backend, Supabase (Database & Auth), dan dashboard interaktif berbasis React (Vite).
+SATRIA adalah aplikasi Early Warning System untuk klasifikasi kualitas air akuakultur. Sistem ini menggabungkan dataset kualitas air, model machine learning, FastAPI backend, Supabase, dan dashboard frontend untuk membantu membaca kondisi air, menjalankan prediksi, melihat analytics, EDA, serta riwayat prediction logs.
 
 ## 🚀 Arsitektur Sistem (Microservices)
 
@@ -15,70 +15,243 @@ Project ini telah berevolusi dari arsitektur monolitik menjadi microservices unt
 4. **Frontend Dashboard (`frontend` | Port: 5173)**  
    Antarmuka klien kaya fitur yang dibangun dengan React (Vite) + TypeScript. Menyajikan dashboard metrik real-time, grafik kualitas air, histori pengguna, dan keamanan otentikasi.
 
-## 🛠️ Tech Stack
+## Tech Stack
 
-**Frontend:** Vite, React, TypeScript, Supabase JS Client, CSS (Vanilla Custom Design)  
-**Backend:** FastAPI, Uvicorn, HTTPX (untuk orkestrasi internal), Pydantic  
-**Machine Learning:** LightGBM, Scikit-learn, Pandas, MLflow (Tracking & Registry)  
-**Database & Auth:** Supabase Auth (ECC P-256), Supabase PostgreSQL, Row Level Security (RLS)  
-**Deployment:** Docker, Docker Compose, `run.bat` (Local runner)
+Frontend:
+- Vite
+- React & TypeScript
+- Supabase JS Client
+- Native HTML/CSS rendering
+- SVG/CSS chart components
 
-## 📁 Struktur Direktori Utama
+Backend:
+- FastAPI & Uvicorn
+- HTTPX (Internal Microservices Routing)
+- Pydantic
+- Pandas
+- LightGBM & Scikit-learn
+- MLflow (Tracking & Registry)
 
-* `frontend/` - Source code UI/UX (React + Vite)
-* `services/`
-  * `api-service/` - FastAPI Gateway
-  * `ml-service/` - ML inference API & skrip MLOps training
-  * `data-service/` - Operasi basis data Supabase
-* `docker-compose.yml` - Orkestrasi container Docker
-* `run.bat` - Skrip launcher interaktif (Docker & Native)
-* `mlflow.db` - Database lokal untuk MLOps Tracking Server
-* `docs/` - Dokumentasi deployment
+Database and Auth:
+- Supabase Auth (ECC P-256)
+- Supabase PostgreSQL
+- Row Level Security policies
+- Tables: `profiles`, `prediction_results`, `water_quality_clean`
 
-## ⚙️ Variabel Lingkungan (.env)
+Deployment:
+- Vercel for frontend
+- Docker / Docker Compose for full local stack
+- `run.bat` local runner for quick initialization
 
-Buat file `.env` di *root directory* repositori Anda dengan format berikut:
+## Main Features
+
+- User login and register with Supabase Auth.
+- Profile settings saved to Supabase `profiles`.
+- Security and Privacy page for display name and password update.
+- Manual prediction form using the trained backend model.
+- Prediction logs saved to Supabase.
+- Reports page with refresh and search.
+- Analytics dashboard using Supabase EDA data.
+- Nitrite, dissolved oxygen, pH, ammonia, phosphorus, and other parameter charts.
+- EDA page with descriptive statistics, distribution chart, and outlier analysis.
+- Deployment files for Vercel and Docker.
+
+## Dataset
+
+Dataset:
+- Title: Refined Aquaculture Water Suitability Signals
+- Theme: Aquaculture water suitability
+- Shape: 4,300 rows and 17 columns
+- Source: Kaggle
+
+Core input parameters:
+- Temperature
+- Turbidity
+- Dissolved Oxygen
+- Biochemical Oxygen Demand
+- Carbon Dioxide
+- pH
+- Total Alkalinity
+- Total Hardness
+- Calcium
+- Ammonia
+- Nitrite
+- Phosphorus
+- Hydrogen Sulfide
+- Plankton Count
+
+Prediction output:
+- `predicted_class_id`
+- `predicted_suitability_tier`
+- probability per class
+
+## Project Structure
+
+```text
+satria-water-quality-ews/
+|-- frontend/                  # Source code UI/UX (React + Vite)
+|
+|-- services/                  # Microservices backend
+|   |-- api-service/           # FastAPI Gateway (Port: 8000)
+|   |-- ml-service/            # ML inference API & skrip MLOps training (Port: 8001)
+|   `-- data-service/          # Operasi basis data Supabase (Port: 8002)
+|
+|-- models/                    # Dikelola secara otomatis oleh MLOps
+|
+|-- notebooks/
+|   |-- eda_aquaculture.ipynb
+|   |-- preprocessing_aquaculture.ipynb
+|   |-- manual_mlops_pipeline.ipynb
+|   `-- pycaret_aqua_water_suitability_.ipynb
+|
+|-- supabase/                  # Skrip SQL untuk setup database
+|   |-- create_profiles_table.sql
+|   |-- create_prediction_results_table.sql
+|   |-- create_water_quality_clean_table.sql
+|   `-- update_realtime_eda_and_prediction_policies.sql
+|
+|-- docs/
+|   `-- DEPLOYMENT_CHECKLIST.md
+|
+|-- docker-compose.yml         # Orkestrasi container Docker
+|-- run.bat                    # Skrip launcher interaktif (Docker & Native)
+|-- vercel.json
+|-- .env.example
+|-- .dockerignore
+`-- README.md
+```
+
+## Environment Variables
+
+Root `.env` untuk backend dan `run.bat` launcher:
 
 ```env
-SUPABASE_URL=https://<your-project-id>.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 SUPABASE_TABLE=water_quality_clean
 SUPABASE_PREDICTION_TABLE=prediction_results
-
-VITE_SUPABASE_URL=https://<your-project-id>.supabase.co
-VITE_SUPABASE_ANON_KEY=<your-anon-key>
+VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
 VITE_API_BASE_URL=http://127.0.0.1:8000
 ```
 
 > **Catatan Penting:** Skrip `run.bat` kami akan secara otomatis menyalin berkas `.env` ini ke dalam setiap folder *microservices* dan juga ke folder `frontend/.env` saat inisialisasi awal.
 
-## 🚀 Cara Menjalankan Aplikasi
+## Local Development (Microservices)
 
-Aplikasi ini dilengkapi dengan `run.bat` *interactive launcher* yang mendukung 2 metode instalasi:
+Cara paling mudah untuk menjalankan secara lokal adalah menggunakan `run.bat`:
 
-Jalankan perintah berikut di CMD/PowerShell Anda:
-```bat
+```bash
 .\run.bat
 ```
 
-Kemudian, pilih opsi yang diinginkan:
-1. **[1] Menggunakan Docker (Direkomendasikan)**
-   Membangun dan meluncurkan semua microservice di dalam *container* menggunakan Docker Compose. Sangat stabil dan terisolasi.
-2. **[2] Berjalan Secara Lokal Native (Non-Docker)**
-   Sistem akan secara otomatis membuat Virtual Environment Python, mengunduh semua depedensi (termasuk modul Node.js), dan meluncurkan semua lima servis (MLflow, 3 Backend Service, dan 1 Frontend) ke dalam satu terminal interaktif menggunakan `npx concurrently`. Tekan `Ctrl+C` kapan saja untuk mematikan semua layanan sekaligus.
+Anda dapat memilih:
+1. **Docker**: `docker-compose up --build`
+2. **Native**: Membuat venv, menginstall library Python & Node, lalu menjalankan kelima layanan (MLflow, ML-Service, Data-Service, API Gateway, dan Frontend) secara konkuren menggunakan `npx concurrently`.
 
-Setelah skrip berjalan, aplikasi dapat diakses di:
-* **Frontend:** `http://127.0.0.1:5173`
-* **API Gateway:** `http://127.0.0.1:8000`
-* **MLflow Tracking Dashboard:** `http://127.0.0.1:5000`
+Open:
+- Frontend: `http://127.0.0.1:5173`
+- API Gateway health: `http://127.0.0.1:8000/health`
+- MLflow Dashboard: `http://127.0.0.1:5000`
 
-## 📊 MLOps (Machine Learning Operations)
+Untuk manual run setiap service, baca `README.md` pada masing-masing folder komponen.
 
-Pelatihan ulang (*retraining*) model dapat dilakukan melalui skrip di dalam `services/ml-service`. Proses *training* telah menggunakan *pipeline* cerdas (*two-stage training* dengan hyperparameter tuning otomatis) dan seluruh riwayat eksperimen (akurasi, confusion matrix, metrik lainnya) akan tersimpan di MLflow Dashboard.
+## Vercel Deployment
 
-Untuk dokumentasi komponen yang lebih mendalam, kami menyarankan membaca `README.md` terpisah yang berada di setiap sub-direktori.
+This repository includes `vercel.json`, so Vercel can deploy the frontend from the repository root.
 
-## 📝 Authors
+Vercel settings:
+- Install command: `cd frontend && npm ci`
+- Build command: `cd frontend && npm run build`
+- Output directory: `frontend/dist`
+
+Required Vercel environment variables:
+
+```env
+VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_API_BASE_URL=https://your-backend-production-url
+```
+
+Note:
+- Vercel deploys the frontend.
+- Backend FastAPI microservices should be deployed separately to a backend host or run through Docker.
+- After backend is deployed, update `VITE_API_BASE_URL` in Vercel.
+
+## Supabase Setup
+
+Run SQL files in this order from Supabase SQL editor:
+
+1. `supabase/create_profiles_table.sql`
+2. `supabase/create_prediction_results_table.sql`
+3. `supabase/create_water_quality_clean_table.sql`
+4. `supabase/update_realtime_eda_and_prediction_policies.sql`
+
+If `water_quality_clean` is empty, you can populate it using the Data Service logic or Supabase UI.
+
+## API Endpoints
+
+API Gateway (Single Entry Point) base URL:
+
+```text
+http://127.0.0.1:8000
+```
+
+Endpoints (Gateway):
+- `GET /health` checks backend availability and forwards to other microservices.
+- `GET /model-info` returns model metadata (routed to ml-service).
+- `POST /predict` predicts water quality (routed to ml-service & data-service).
+- `GET /profiles/...`, `GET /eda/...` (routed to data-service).
+
+Example prediction payload:
+
+```json
+{
+  "data": {
+    "temperature": 28,
+    "turbidity_cm": 45,
+    "dissolved_oxygen_mg_l": 6.8,
+    "biochemical_oxygen_demand_mg_l": 3.2,
+    "carbon_dioxide_co2": 8.4,
+    "ph": 7.4,
+    "total_alkalinity_mg_l_1": 120,
+    "total_hardness_mg_l_1": 180,
+    "calcium_mg_l_1": 70,
+    "ammonia_mg_l_1": 0.05,
+    "nitrite_mg_l_1": 0.02,
+    "phosphorus_mg_l_1": 0.3,
+    "hydrogen_sulfide_mg_l_1": 0.01,
+    "plankton_count_no_l_1": 2500
+  },
+  "save_to_supabase": false
+}
+```
+
+## Production Smoke Test
+
+Before final submission or demo:
+
+- Login/register user.
+- Save profile in Settings.
+- Update display name or password in Security and Privacy.
+- Run Prediction.
+- Check Reports and refresh logs.
+- Open Analytics and verify Dissolved Oxygen, Nitrite, and Correlation visuals.
+- Open EDA and verify Distribution and Outlier Analysis.
+- Check API Gateway `/health`.
+- Check Vercel env vars and Supabase RLS policies.
+
+## Notes
+
+More detailed deployment notes are available in:
+
+```text
+docs/DEPLOYMENT_CHECKLIST.md
+```
+
+Lihat juga `README.md` terpisah yang berada di setiap direktori (misalnya `frontend/README.md` atau `services/ml-service/README.md`).
+
+## Authors
 
 PBL Web Service, MLOps, and Data Mining  
 Politeknik Elektronika Negeri Surabaya (PENS)

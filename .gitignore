@@ -28,3 +28,5 @@ outputs/
 mlflow.db
 mlartifacts/
 /model_metadata.json
+scratch/
+

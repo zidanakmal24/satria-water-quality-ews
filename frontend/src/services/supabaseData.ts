@@ -1,57 +1,50 @@
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
-import type { EdaRecord, PredictionLog, PredictionResult, Profile } from "../types";
+import type { EdaRecord, PredictionLog, Profile } from "../types";
+import { API_BASE_URL } from "../constants";
 
 export async function loadProfile(session: Session | null) {
   const user = session?.user;
   if (!user) return null;
 
-  const fallback = {
-    id: user.id,
-    email: user.email || null,
-    full_name: user.user_metadata?.full_name || "SATRIA User",
-    role: user.user_metadata?.role || "",
-    organization: user.user_metadata?.organization || "",
-    bio: user.user_metadata?.bio || "",
-    avatar_url: null,
-  };
-
-  const { data, error } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
-  if (error || !data) {
-    const { data: inserted } = await supabase.from("profiles").upsert(fallback).select("*").single();
-    return ((inserted as Profile) || fallback) as Profile;
+  try {
+    const response = await fetch(`${API_BASE_URL}/profiles`, {
+      headers: {
+        "Authorization": `Bearer ${session.access_token}`
+      }
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as Profile;
+  } catch (error) {
+    console.error("Failed to load profile:", error);
+    return null;
   }
-
-  return data as Profile;
 }
 
 export async function saveProfile(session: Session, formData: FormData) {
   const updates = {
-    id: session.user.id,
-    email: session.user.email || "",
     full_name: String(formData.get("fullName") || "").trim(),
     role: String(formData.get("role") || "").trim(),
     organization: String(formData.get("organization") || "").trim(),
     bio: String(formData.get("bio") || "").trim(),
-    updated_at: new Date().toISOString(),
   };
 
-  const { data, error } = await supabase
-    .from("profiles")
-    .update(updates)
-    .eq("id", session.user.id)
-    .select("*")
-    .maybeSingle();
+  const response = await fetch(`${API_BASE_URL}/profiles`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${session.access_token}`
+    },
+    body: JSON.stringify(updates),
+  });
 
-  if (error) throw error;
-
-  let saved = data as Profile | null;
-  if (!saved) {
-    const { data: inserted, error: insertError } = await supabase.from("profiles").insert(updates).select("*").single();
-    if (insertError) throw insertError;
-    saved = inserted as Profile;
+  if (!response.ok) {
+    throw new Error(await response.text());
   }
 
+  const saved = (await response.json()) as Profile;
+
+  // Sync with Supabase Auth metadata
   await supabase.auth.updateUser({
     data: {
       full_name: updates.full_name,
@@ -60,6 +53,7 @@ export async function saveProfile(session: Session, formData: FormData) {
       bio: updates.bio,
     },
   });
+
   return saved;
 }
 
@@ -78,67 +72,77 @@ export async function saveSecuritySettings(session: Session, formData: FormData)
   const { error: authError } = await supabase.auth.updateUser(authUpdates);
   if (authError) throw authError;
 
-  const { data, error } = await supabase
-    .from("profiles")
-    .update({ full_name: fullName, updated_at: new Date().toISOString() })
-    .eq("id", session.user.id)
-    .select("*")
-    .maybeSingle();
-  if (error) throw error;
-
-  return data as Profile | null;
-}
-
-export async function savePredictionLog(
-  session: Session | null,
-  inputData: Record<string, number>,
-  result: PredictionResult,
-) {
-  const userId = session?.user.id;
-  if (!userId) return;
-
-  await supabase.from("prediction_results").insert({
-    user_id: userId,
-    input_data: inputData,
-    predicted_class_id: result.predicted_class_id,
-    predicted_suitability_tier: result.predicted_suitability_tier,
-    probabilities: result.probabilities,
+  const response = await fetch(`${API_BASE_URL}/profiles`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${session.access_token}`
+    },
+    body: JSON.stringify({ full_name: fullName }),
   });
+
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+
+  return (await response.json()) as Profile;
 }
 
 export async function loadPredictionLogs(session: Session | null) {
-  const userId = session?.user.id;
-  if (!userId) return [];
+  if (!session) return [];
 
-  const { data } = await supabase
-    .from("prediction_results")
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(100);
-
-  return (data || []) as PredictionLog[];
+  try {
+    const response = await fetch(`${API_BASE_URL}/logs?limit=100`, {
+      headers: {
+        "Authorization": `Bearer ${session.access_token}`
+      }
+    });
+    if (!response.ok) return [];
+    return (await response.json()) as PredictionLog[];
+  } catch (error) {
+    console.error("Failed to load prediction logs:", error);
+    return [];
+  }
 }
 
 export async function loadUserRiskCount(session: Session | null) {
-  const userId = session?.user.id;
-  if (!userId) return 0;
+  if (!session) return 0;
 
-  const { count } = await supabase
-    .from("prediction_results")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .ilike("predicted_suitability_tier", "%Reduced%");
-
-  return count || 0;
+  try {
+    const response = await fetch(`${API_BASE_URL}/logs/risk-count`, {
+      headers: {
+        "Authorization": `Bearer ${session.access_token}`
+      }
+    });
+    if (!response.ok) return 0;
+    const res = await response.json();
+    return res.risk_count || 0;
+  } catch (error) {
+    console.error("Failed to load user risk count:", error);
+    return 0;
+  }
 }
 
 export async function loadEdaRows() {
-  const { data } = await supabase.from("water_quality_clean").select("*").limit(1000);
-  return (data || []) as EdaRecord[];
+  try {
+    const response = await fetch(`${API_BASE_URL}/eda/rows?limit=1000`);
+    if (!response.ok) return [];
+    const res = await response.json();
+    return (res.data || []) as EdaRecord[];
+  } catch (error) {
+    console.error("Failed to load EDA rows:", error);
+    return [];
+  }
 }
 
 export async function loadEdaRowCount() {
-  const { count } = await supabase.from("water_quality_clean").select("*", { count: "exact", head: true });
-  return count || 0;
+  try {
+    const response = await fetch(`${API_BASE_URL}/eda/count`);
+    if (!response.ok) return 0;
+    const res = await response.json();
+    return res.count || 0;
+  } catch (error) {
+    console.error("Failed to load EDA row count:", error);
+    return 0;
+  }
 }

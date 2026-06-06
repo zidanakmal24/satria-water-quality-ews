@@ -1,55 +1,53 @@
 import logging
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-import jwt
+from supabase import create_client, Client
 from app.core.config import settings
 
 logger = logging.getLogger("api-service.security")
 security = HTTPBearer()
 
+# Initialize global Supabase client for auth operations
+if not settings.SUPABASE_URL or not settings.SUPABASE_ANON_KEY:
+    logger.error("SUPABASE_URL or SUPABASE_ANON_KEY is not configured.")
+    supabase_client = None
+else:
+    supabase_client: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
+
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
     """
-    FastAPI dependency to validate Supabase JWT tokens.
-    Returns the decoded token payload if valid.
+    FastAPI dependency to validate Supabase JWT tokens via Supabase Auth API.
+    This natively supports ECC keys without requiring manual JWKS caching or HS256 secrets.
+    Returns the user data if valid.
     """
     token = credentials.credentials
     
-    if not settings.SUPABASE_JWT_SECRET:
-        logger.error("SUPABASE_JWT_SECRET is not configured in the environment variables.")
+    if not supabase_client:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Server security configuration error. Please contact administrator."
         )
 
     try:
-        # Decode the Supabase JWT.
-        # Supabase uses HS256 signed with SUPABASE_JWT_SECRET.
-        # The 'aud' (audience) claim is usually 'authenticated'.
-        payload = jwt.decode(
-            token,
-            settings.SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
-            options={"verify_aud": False} # We bypass strict audience validation to avoid mismatch issues
-        )
+        # Call Supabase to verify the token and get the user
+        user_resp = supabase_client.auth.get_user(token)
+        user = user_resp.user
         
-        # Ensure user_id (sub) exists in payload
-        user_id = payload.get("sub")
-        if not user_id:
-            raise jwt.InvalidTokenError("Missing subject (sub) claim.")
+        if not user:
+            raise Exception("User not found in response")
             
-        return payload
+        # Return a dictionary mimicking the decoded JWT payload used elsewhere
+        return {
+            "sub": user.id,
+            "email": user.email,
+            "role": user.role,
+            "raw_user_meta_data": user.user_metadata or {}
+        }
         
-    except jwt.ExpiredSignatureError:
-        logger.warning("JWT validation failed: Token expired")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token has expired",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    except jwt.InvalidTokenError as e:
+    except Exception as e:
         logger.warning(f"JWT validation failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid token: {str(e)}",
+            detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
         )

@@ -3,7 +3,7 @@ import logging
 from typing import List, Optional
 from fastapi import APIRouter, Depends, Header, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-import jwt
+
 
 from app.core.config import settings
 from app.schemas.prediction_schema import PredictionRequest, BatchPredictionRequest, PredictionResponse
@@ -16,22 +16,22 @@ router = APIRouter(tags=["Prediction"])
 
 security_optional = HTTPBearer(auto_error=False)
 
+from app.core.security import supabase_client
+
 async def get_optional_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_optional)) -> Optional[dict]:
     """
     Optional authentication dependency.
-    If a valid JWT token is provided, returns the decoded user payload.
+    If a valid JWT token is provided, returns the decoded user payload from Supabase.
     Otherwise, returns None.
     """
-    if not credentials:
+    if not credentials or not supabase_client:
         return None
     try:
-        payload = jwt.decode(
-            credentials.credentials,
-            settings.SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
-            options={"verify_aud": False}
-        )
-        return payload
+        user_resp = supabase_client.auth.get_user(credentials.credentials)
+        user = user_resp.user
+        if user:
+            return {"sub": user.id, "email": user.email, "role": user.role}
+        return None
     except Exception as e:
         logger.warning(f"Optional JWT validation failed: {str(e)}")
         return None

@@ -1,11 +1,16 @@
 import { API_BASE_URL } from "../constants";
 import type { ModelInfo, PredictionResult } from "../types";
 
-export async function runPrediction(payload: Record<string, number>) {
+export async function runPrediction(payload: Record<string, number>, token: string | null = null) {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  
   const response = await fetch(`${API_BASE_URL}/predict`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ data: payload, save_to_supabase: false }),
+    headers,
+    body: JSON.stringify({ data: payload }),
   });
 
   if (!response.ok) {
@@ -15,11 +20,16 @@ export async function runPrediction(payload: Record<string, number>) {
   return (await response.json()) as PredictionResult;
 }
 
-export async function runBatchPrediction(payload: Record<string, number>[]) {
+export async function runBatchPrediction(payload: Record<string, number>[], token: string | null = null) {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${API_BASE_URL}/predict/batch`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ data: payload, save_to_supabase: false }),
+    headers,
+    body: JSON.stringify({ data: payload }),
   });
 
   if (!response.ok) {

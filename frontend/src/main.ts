@@ -7,7 +7,6 @@ import {
   loadPredictionLogs,
   loadProfile,
   loadUserRiskCount,
-  savePredictionLog,
   saveProfile,
   saveSecuritySettings,
 } from "./services/supabaseData";
@@ -165,8 +164,7 @@ async function handlePredictionSubmit(event: Event) {
   render();
 
   try {
-    state.latestPrediction = await runPrediction(payload);
-    await savePredictionLog(state.session, payload, state.latestPrediction);
+    state.latestPrediction = await runPrediction(payload, state.session?.access_token || null);
     state.predictionLogs = await loadPredictionLogs(state.session);
   } catch (error) {
     state.message = error instanceof Error ? error.message : "Prediksi gagal.";
@@ -217,11 +215,8 @@ async function handleBulkPredictionUpload(event: Event) {
       return record;
     });
 
-    const results = await runBatchPrediction(payload);
+    const results = await runBatchPrediction(payload, state.session?.access_token || null);
     state.latestPrediction = results[0] || null;
-    for (let index = 0; index < results.length; index += 1) {
-      await savePredictionLog(state.session, payload[index], results[index]);
-    }
     state.predictionLogs = await loadPredictionLogs(state.session);
     state.message = `${results.length} prediksi dari JSON berhasil diproses dan disimpan.`;
   } catch (error) {

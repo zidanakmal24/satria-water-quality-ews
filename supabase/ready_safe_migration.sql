@@ -2,8 +2,8 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text,
   full_name text,
-  role text not null default 'Aquaculture Engineer',
-  organization text not null default 'SATRIA Research',
+  role text not null default '',
+  organization text not null default '',
   bio text not null default '',
   avatar_url text,
   created_at timestamptz not null default now(),
@@ -11,10 +11,15 @@ create table if not exists public.profiles (
 );
 
 alter table public.profiles
-add column if not exists role text not null default 'Aquaculture Engineer',
-add column if not exists organization text not null default 'SATRIA Research',
+add column if not exists role text not null default '',
+add column if not exists organization text not null default '',
 add column if not exists bio text not null default '',
 add column if not exists avatar_url text;
+
+alter table public.profiles
+alter column role set default '',
+alter column organization set default '',
+alter column bio set default '';
 
 alter table public.profiles enable row level security;
 
@@ -49,8 +54,8 @@ begin
     new.id,
     new.email,
     coalesce(new.raw_user_meta_data ->> 'full_name', ''),
-    coalesce(new.raw_user_meta_data ->> 'role', 'Aquaculture Engineer'),
-    coalesce(new.raw_user_meta_data ->> 'organization', 'SATRIA Research'),
+    coalesce(new.raw_user_meta_data ->> 'role', ''),
+    coalesce(new.raw_user_meta_data ->> 'organization', ''),
     coalesce(new.raw_user_meta_data ->> 'bio', '')
   )
   on conflict (id) do update

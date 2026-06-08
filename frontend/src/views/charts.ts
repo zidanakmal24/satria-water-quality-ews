@@ -17,6 +17,13 @@ function average(nums: number[]) {
   return nums.length ? nums.reduce((sum, value) => sum + value, 0) / nums.length : 0;
 }
 
+function percentile(nums: number[], pct: number) {
+  if (!nums.length) return 0;
+  const sorted = [...nums].sort((a, b) => a - b);
+  const index = Math.min(Math.floor(sorted.length * pct), sorted.length - 1);
+  return sorted[index];
+}
+
 function sample(nums: number[], size = 18) {
   if (nums.length <= size) return nums;
   const step = Math.max(Math.floor(nums.length / size), 1);
@@ -52,6 +59,9 @@ export function renderLineChart(rows: EdaRecord[], primaryKey: string, secondary
   const secondary = values(rows, secondaryKey);
   const primaryMeta = numericParameters.find((item) => item.key === primaryKey);
   const secondaryMeta = numericParameters.find((item) => item.key === secondaryKey);
+  if (primary.length < 2) {
+    return renderEmptyChart("Belum cukup data trend", "Minimal 2 log prediksi diperlukan agar garis perubahan parameter bisa dibaca.");
+  }
 
   return `
     <div class="chart-legend">
@@ -103,6 +113,9 @@ export function renderBarChart(rows: EdaRecord[], key = "ammonia_mg_l_1") {
   const { min, max } = extent(nums);
   const meta = numericParameters.find((item) => item.key === key);
   const range = Math.max(max - min, Number.EPSILON);
+  if (!nums.length) {
+    return renderEmptyChart("Belum ada sampel", `Jalankan prediksi terlebih dahulu agar level ${escapeHtml(meta?.label || key)} bisa divisualisasikan.`);
+  }
 
   return `
     <div class="chart-caption">${escapeHtml(meta?.label || key)} sampled levels</div>
@@ -141,8 +154,37 @@ export function renderDonut(logs: PredictionLog[]) {
   `;
 }
 
+export function renderDatasetClassDistribution(rows: EdaRecord[]) {
+  const counts = rows.reduce<Record<string, number>>((acc, row) => {
+    const label = String(row.aquaculture_suitability_tier || row.water_quality_label || "Unknown");
+    acc[label] = (acc[label] || 0) + 1;
+    return acc;
+  }, {});
+  const total = Object.values(counts).reduce((sum, count) => sum + count, 0) || 1;
+
+  return `
+    <p class="chart-help">Cara baca: grafik ini menunjukkan komposisi label kualitas air pada sampel EDA. Jika kategori risiko dominan, dataset memang banyak berisi kondisi tidak ideal.</p>
+    <div class="class-bars">
+      ${Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([label, count]) => {
+          const pct = (count / total) * 100;
+          return `<div><span>${escapeHtml(label)}</span><strong>${count} rows</strong><em style="--w:${pct.toFixed(1)}%"></em><small>${pct.toFixed(1)}%</small></div>`;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
 export function renderHeatmap(rows: EdaRecord[]) {
   const keys = ["ph", "temperature", "dissolved_oxygen_mg_l", "nitrite_mg_l_1", "ammonia_mg_l_1"];
+  const completeRows = rows.filter((row) => keys.every((key) => Number.isFinite(Number(row[key]))));
+  if (completeRows.length < 3) {
+    return renderEmptyChart(
+      "Belum cukup data korelasi",
+      "Minimal 3 log prediksi dengan parameter lengkap diperlukan. Nilai 1.00 hanya akan ditampilkan setelah korelasi benar-benar bermakna.",
+    );
+  }
   return `<p class="chart-help">Cara baca: nilai mendekati 1 berarti hubungan antar parameter searah kuat, mendekati -1 berarti berlawanan, dan mendekati 0 berarti hubungannya lemah.</p><div class="heatmap-axis"><span></span>${keys.map((key) => `<strong>${shortLabel(key)}</strong>`).join("")}${keys
     .flatMap((rowKey) =>
       [`<strong>${shortLabel(rowKey)}</strong>`, ...keys.map((colKey) => {
@@ -157,7 +199,7 @@ export function renderBoxplotLike(rows: EdaRecord[], activeKey: string) {
   const keys = [activeKey, "ph", "dissolved_oxygen_mg_l", "ammonia_mg_l_1"].filter(
     (key, index, arr) => arr.indexOf(key) === index,
   );
-  return `<p class="chart-help">Cara baca: kotak menunjukkan rentang tengah data atau IQR. Label outlier menunjukkan jumlah nilai yang berada jauh dari pola umum dataset.</p><div class="boxplot">${keys.map((key) => renderBoxRow(rows, key)).join("")}</div>`;
+  return `<p class="chart-help">Cara baca: kotak menunjukkan rentang tengah data atau IQR. Label outlier menunjukkan jumlah nilai yang berada jauh dari pola umum dataset.</p><div class="boxplot">${keys.map((key) => renderBoxRow(rows, key)).join("")}</div>${renderOutlierGuidance(rows, keys)}`;
 }
 
 function renderBoxRow(rows: EdaRecord[], key: string) {
@@ -175,6 +217,70 @@ function renderBoxRow(rows: EdaRecord[], key: string) {
   return `<span title="${escapeHtml(meta?.label || key)} min ${min.toFixed(2)} max ${max.toFixed(2)}" style="--w:${width}%;--x:${x}%"><b>${escapeHtml(meta?.label || key)}</b><em>${outliers} outlier | IQR ${iqr.toFixed(3)}</em></span>`;
 }
 
+export function renderOutlierGuidance(rows: EdaRecord[], keys = numericParameters.slice(0, 6).map((item) => item.key)) {
+  const summary = keys.map((key) => getOutlierSummary(rows, key)).filter((item) => item.count > 0);
+  const highest = summary.sort((a, b) => b.count - a.count)[0];
+
+  return `
+    <div class="outlier-guidance">
+      <h3>Cara menangani outlier</h3>
+      <p>Outlier jangan langsung dihapus. Untuk EWS kualitas air, nilai ekstrem bisa berarti kondisi bahaya, sensor error, atau variasi lapangan. Gunakan langkah berikut sebelum cleaning:</p>
+      <ol>
+        <li><b>Validasi sensor/input</b>: cek satuan, typo angka, dan apakah nilai mungkin terjadi secara biologis.</li>
+        <li><b>Bandingkan parameter terkait</b>: nitrite/ammonia tinggi dengan DO rendah lebih mungkin risiko nyata daripada error tunggal.</li>
+        <li><b>Labelkan, jangan buang dulu</b>: simpan flag outlier agar model tetap belajar pola kondisi bahaya.</li>
+        <li><b>Winsorize untuk chart saja</b>: boleh membatasi skala visual agar grafik rapi, tetapi data mentah tetap disimpan.</li>
+      </ol>
+      <div class="outlier-note">${highest ? `Parameter paling banyak outlier pada tampilan ini: <b>${escapeHtml(highest.label)}</b> (${highest.count} data).` : "Tidak ada outlier signifikan pada parameter yang sedang ditampilkan."}</div>
+    </div>
+  `;
+}
+
+export function renderRiskFlagSummary(rows: EdaRecord[]) {
+  const flags = [
+    { key: "ph", label: "pH ekstrem", test: (value: number) => value < 6.5 || value > 8.5 },
+    { key: "dissolved_oxygen_mg_l", label: "DO rendah", test: (value: number) => value < 4 },
+    { key: "ammonia_mg_l_1", label: "Ammonia tinggi", test: (value: number) => value > 0.05 },
+    { key: "nitrite_mg_l_1", label: "Nitrite tinggi", test: (value: number) => value > 0.2 },
+    { key: "hydrogen_sulfide_mg_l_1", label: "H2S terdeteksi", test: (value: number) => value > 0.02 },
+    { key: "plankton_count_no_l_1", label: "Plankton ekstrem", test: (value: number) => value > 100000 },
+  ];
+  const total = Math.max(rows.length, 1);
+
+  return `
+    <p class="chart-help">Cara baca: kartu ini bukan aturan final model, tetapi indikator cepat untuk menemukan parameter yang sering masuk zona perhatian.</p>
+    <div class="risk-flag-grid">
+      ${flags
+        .map((flag) => {
+          const count = rows.filter((row) => {
+            const value = Number(row[flag.key]);
+            return Number.isFinite(value) && flag.test(value);
+          }).length;
+          const pct = (count / total) * 100;
+          return `<div><span>${escapeHtml(flag.label)}</span><strong>${count}</strong><em>${pct.toFixed(1)}% dari sample</em></div>`;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function getOutlierSummary(rows: EdaRecord[], key: string) {
+  const nums = values(rows, key);
+  const q1 = percentile(nums, 0.25);
+  const q3 = percentile(nums, 0.75);
+  const iqr = q3 - q1;
+  const low = q1 - 1.5 * iqr;
+  const high = q3 + 1.5 * iqr;
+  const meta = numericParameters.find((item) => item.key === key);
+  return {
+    key,
+    label: meta?.label || key,
+    count: nums.filter((value) => value < low || value > high).length,
+    low,
+    high,
+  };
+}
+
 function shortLabel(key: string) {
   const meta = numericParameters.find((item) => item.key === key);
   return meta?.label || key.replaceAll("_", " ");
@@ -183,6 +289,10 @@ function shortLabel(key: string) {
 function renderChartStats(nums: number[], unit = "") {
   const { min, max } = extent(nums);
   return `<div class="chart-stat-row"><span>Min <b>${formatMetricValue(min, unit)}</b></span><span>Avg <b>${formatMetricValue(average(nums), unit)}</b></span><span>Max <b>${formatMetricValue(max, unit)}</b></span></div>`;
+}
+
+function renderEmptyChart(title: string, message: string) {
+  return `<div class="empty-chart"><strong>${escapeHtml(title)}</strong><p>${escapeHtml(message)}</p></div>`;
 }
 
 function formatMetricValue(value: number, unit = "") {

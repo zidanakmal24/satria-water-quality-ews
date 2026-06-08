@@ -2,6 +2,7 @@ import logging
 from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes import predict, profile, logs, eda
+from app.core.config import settings
 from app.services.ml_client import ml_client
 from app.utils.logger import setup_logger
 
@@ -17,7 +18,7 @@ app = FastAPI(
 # Enable CORS for frontend web client
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

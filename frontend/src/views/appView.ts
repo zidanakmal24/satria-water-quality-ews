@@ -5,11 +5,13 @@ import { escapeAttribute, escapeHtml, formatDate, formatNumber, getDisplayName, 
 import {
   renderBarChart,
   renderBoxplotLike,
+  renderDatasetClassDistribution,
   renderDonut,
   renderHeatmap,
   renderHistogram,
   renderLineChart,
   renderMetricTabs,
+  renderRiskFlagSummary,
 } from "./charts";
 
 export function renderApp(state: AppState) {
@@ -261,7 +263,7 @@ function filteredLogs(state: AppState) {
 function renderEdaPage(state: AppState) {
   const stats = computeEdaStats(state.edaRows);
   const active = numericParameters.find((item) => item.key === state.edaMetric);
-  return `<section class="work-page"><div class="page-heading row-heading"><div><h1>Global Clean Dataset EDA</h1><p>EDA memakai keseluruhan dataset clean dari Supabase water_quality_clean. Grafik ini edukatif/global, terpisah dari Analytics user.</p><span class="realtime-badge ${state.realtimeConnected ? "on" : ""}">${state.realtimeConnected ? "Realtime dataset watcher on" : "Manual refresh available"}</span></div><button class="refresh-button" id="refreshData" type="button">Refresh EDA</button></div><div class="eda-summary-grid"><article><span>Total Clean Rows</span><strong>${formatNumber(state.edaTotalRows || stats.rows)}</strong><p>Exact Supabase count</p></article><article><span>Features Extracted</span><strong>${stats.features}</strong><p>Chemical and physical variables</p></article><article><span>Missing Values</span><strong>${stats.missingPct.toFixed(2)}%</strong><p>Calculated from loaded sample</p></article></div><div class="eda-grid"><article class="stats-table"><h2>Descriptive Statistics</h2>${renderStatsTable(state)}</article><article class="chart-card wide"><div class="chart-heading"><h2>${escapeHtml(active?.label || "Parameter")} Distribution</h2>${renderMetricTabs(state.edaMetric, "eda")}</div>${renderHistogram(state.edaRows, state.edaMetric)}</article><article class="chart-card box-wide"><h2>Outlier Analysis</h2>${renderBoxplotLike(state.edaRows, state.edaMetric)}</article></div></section>`;
+  return `<section class="work-page"><div class="page-heading row-heading"><div><h1>Global Clean Dataset EDA</h1><p>EDA memakai keseluruhan dataset clean dari Supabase water_quality_clean. Grafik ini edukatif/global, terpisah dari Analytics user.</p><span class="realtime-badge ${state.realtimeConnected ? "on" : ""}">${state.realtimeConnected ? "Realtime dataset watcher on" : "Manual refresh available"}</span></div><button class="refresh-button" id="refreshData" type="button">Refresh EDA</button></div><div class="eda-summary-grid"><article><span>Total Clean Rows</span><strong>${formatNumber(state.edaTotalRows || stats.rows)}</strong><p>Exact Supabase count</p></article><article><span>Features Extracted</span><strong>${stats.features}</strong><p>Chemical and physical variables</p></article><article><span>Missing Values</span><strong>${stats.missingPct.toFixed(2)}%</strong><p>Calculated from loaded sample</p></article></div><div class="eda-grid"><article class="stats-table"><h2>Descriptive Statistics</h2>${renderStatsTable(state)}</article><article class="chart-card wide"><div class="chart-heading"><h2>${escapeHtml(active?.label || "Parameter")} Distribution</h2>${renderMetricTabs(state.edaMetric, "eda")}</div>${renderHistogram(state.edaRows, state.edaMetric)}</article><article class="chart-card"><h2>Suitability Class Distribution</h2>${renderDatasetClassDistribution(state.edaRows)}</article><article class="chart-card"><h2>Parameter Risk Flags</h2>${renderRiskFlagSummary(state.edaRows)}</article><article class="chart-card wide"><h2>Global Parameter Correlation</h2><p class="chart-caption">Korelasi dihitung dari sample clean dataset yang dimuat dari Supabase.</p>${renderHeatmap(state.edaRows)}</article><article class="chart-card box-wide"><h2>Outlier Analysis</h2>${renderBoxplotLike(state.edaRows, state.edaMetric)}</article></div></section>`;
 }
 
 function renderStatsTable(state: AppState) {

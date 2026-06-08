@@ -11,6 +11,14 @@ export type ComputedEdaStats = {
   nitriteMean: number;
 };
 
+const fieldAliases = {
+  ph: ["ph", "pH"],
+  temperature: ["temperature", "temperature_c"],
+  dissolvedOxygen: ["dissolved_oxygen_mg_l", "do"],
+  ammonia: ["ammonia_mg_l_1", "ammonia_mg_l", "ammonia"],
+  nitrite: ["nitrite_mg_l_1", "nitrite_mg_l", "nitrite"],
+} as const;
+
 function mean(values: number[]): number {
   return values.length
     ? values.reduce((a, b) => a + b, 0) / values.length
@@ -73,35 +81,23 @@ export function computeEdaStats(
         : (missing / totalCells) * 100,
 
     avgPh: mean(
-      getNumericColumn(rows, ["ph", "pH"])
+      getNumericColumn(rows, [...fieldAliases.ph])
     ),
 
     tempMean: mean(
-      getNumericColumn(rows, [
-        "temperature",
-        "temperature_c",
-      ])
+      getNumericColumn(rows, [...fieldAliases.temperature])
     ),
 
     doMean: mean(
-      getNumericColumn(rows, [
-        "do",
-        "dissolved_oxygen_mg_l",
-      ])
+      getNumericColumn(rows, [...fieldAliases.dissolvedOxygen])
     ),
 
     ammoniaMean: mean(
-      getNumericColumn(rows, [
-        "ammonia",
-        "ammonia_mg_l",
-      ])
+      getNumericColumn(rows, [...fieldAliases.ammonia])
     ),
 
     nitriteMean: mean(
-      getNumericColumn(rows, [
-        "nitrite",
-        "nitrite_mg_l",
-      ])
+      getNumericColumn(rows, [...fieldAliases.nitrite])
     ),
   };
 }

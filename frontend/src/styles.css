@@ -1257,6 +1257,31 @@ button:disabled {
   color: #155989;
 }
 
+.empty-chart {
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  border: 1px dashed #cbd8e5;
+  border-radius: 12px;
+  background: #f8fbfd;
+  text-align: center;
+}
+
+.empty-chart strong {
+  color: #155989;
+  font-size: 15px;
+}
+
+.empty-chart p {
+  max-width: 420px;
+  margin: 0;
+  color: #66758a;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
 .chart-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -1465,6 +1490,103 @@ button:disabled {
   color: #0b2f4d;
   font-size: 12px;
   font-weight: 900;
+}
+
+.class-bars,
+.risk-flag-grid,
+.outlier-guidance {
+  margin-top: 18px;
+}
+
+.class-bars {
+  display: grid;
+  gap: 14px;
+}
+
+.class-bars div {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) auto;
+  gap: 6px 12px;
+  align-items: center;
+}
+
+.class-bars span,
+.risk-flag-grid span {
+  color: #24384f;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.class-bars strong,
+.class-bars small,
+.risk-flag-grid em {
+  color: #718299;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.class-bars em {
+  grid-column: 1 / -1;
+  height: 9px;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, #0fb5a5 0 var(--w), #e7eef5 var(--w) 100%);
+}
+
+.risk-flag-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.risk-flag-grid div {
+  min-height: 88px;
+  padding: 14px;
+  border: 1px solid #dbe5ee;
+  border-radius: 10px;
+  background: #f8fbfd;
+}
+
+.risk-flag-grid strong {
+  display: block;
+  margin: 6px 0 3px;
+  color: #155989;
+  font-size: 24px;
+}
+
+.outlier-guidance {
+  padding: 18px;
+  border: 1px solid #dbe5ee;
+  border-radius: 12px;
+  background: #f8fbfd;
+}
+
+.outlier-guidance h3 {
+  margin: 0 0 8px;
+  color: #10243b;
+  font-size: 16px;
+}
+
+.outlier-guidance p,
+.outlier-guidance li {
+  color: #5f7187;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.outlier-guidance ol {
+  margin: 12px 0;
+  padding-left: 18px;
+}
+
+.outlier-note {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #e8f8f5;
+  color: #0f665f;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .heatmap span,

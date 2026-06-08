@@ -348,7 +348,9 @@ async function handleLogout() {
   state.session = null;
   state.profile = null;
   state.predictionLogs = [];
+  state.userRiskCount = 0;
   state.latestPrediction = null;
+  state.realtimeConnected = false;
   state.currentPage = "home";
   render();
 }

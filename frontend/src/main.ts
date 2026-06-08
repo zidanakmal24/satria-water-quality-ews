@@ -33,6 +33,7 @@ function bindEvents() {
   document.querySelector("#toggleModeBottom")?.addEventListener("click", toggleMode);
   document.querySelector("#forgotPassword")?.addEventListener("click", handleForgotPassword);
   document.querySelector("#logoutButton")?.addEventListener("click", handleLogout);
+  document.querySelector("#navLogoutButton")?.addEventListener("click", handleLogout);
   document.querySelector("#authForm")?.addEventListener("submit", handleAuthSubmit);
   document.querySelector("#predictionForm")?.addEventListener("submit", handlePredictionSubmit);
   document.querySelector("#predictionForm")?.addEventListener("input", handlePredictionFormInput);
@@ -46,7 +47,18 @@ function bindEvents() {
   document.querySelectorAll<HTMLElement>("[data-language]").forEach((element) => {
     element.addEventListener("click", () => {
       state.language = element.dataset.language === "en" ? "en" : "id";
+      localStorage.setItem("satria_language", state.language);
       render();
+    });
+  });
+  document.querySelectorAll<HTMLElement>("[data-menu-toggle]").forEach((element) => {
+    element.addEventListener("click", () => {
+      element.closest("nav")?.classList.toggle("is-open");
+    });
+  });
+  document.querySelectorAll<HTMLElement>("[data-menu-overlay]").forEach((element) => {
+    element.addEventListener("click", () => {
+      element.closest("nav")?.classList.remove("is-open");
     });
   });
   document.querySelectorAll<HTMLButtonElement>(".preset-btn").forEach((btn) => {
@@ -135,10 +147,17 @@ async function handleAuthSubmit(event: Event) {
   const formData = new FormData(event.currentTarget as HTMLFormElement);
   const email = String(formData.get("email") || "").trim();
   const password = String(formData.get("password") || "");
+  const confirmPassword = String(formData.get("confirmPassword") || "");
   const fullName = String(formData.get("fullName") || "").trim();
 
   if (!email || !password || (state.authMode === "register" && !fullName)) {
     state.message = "Semua field wajib diisi.";
+    render();
+    return;
+  }
+
+  if (state.authMode === "register" && password !== confirmPassword) {
+    state.message = "Konfirmasi password belum sama.";
     render();
     return;
   }

@@ -1,7 +1,9 @@
 import type { AppState } from "./types";
 
+const storedLanguage = typeof localStorage !== "undefined" && localStorage.getItem("satria_language") === "en" ? "en" : "id";
+
 export const state: AppState = {
-  language: "id",
+  language: storedLanguage,
   authMode: "login",
   currentPage: "home",
   loading: false,

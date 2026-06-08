@@ -1,6 +1,6 @@
 import { HERO_LOGO_PATH, numericParameters, predictionFields } from "../constants";
 import type { AppPage, AppState, PredictionLog } from "../types";
-import { computeEdaStats } from "../utils/eda";
+import { computeEdaStats, renderClassDistribution, renderDataInfoTable, renderOutlierAnalysis, renderPhDistribution } from "../utils/eda";
 import { escapeAttribute, escapeHtml, formatDate, formatNumber, getDisplayName, getInitials, statusClass } from "../utils/format";
 import { t } from "../utils/translations";
 import {
@@ -28,6 +28,7 @@ function renderAuthPage(state: AppState) {
     <main class="auth-shell">
       <nav class="topbar">
         <button class="brand auth-brand" type="button" data-page="home"><span class="brand-mark">S</span><span>SATRIA</span></button>
+        <button class="public-menu-toggle" type="button" data-menu-toggle aria-label="${label("publicNavOpen")}"><span></span><span></span><span></span></button>
         <div class="auth-nav-actions">
           <button class="nav-link" type="button" data-page="home">${label("home")}</button>
           <button class="nav-link ${!isRegister ? "active" : ""}" type="button" data-auth-mode="login">${label("login")}</button>
@@ -36,32 +37,20 @@ function renderAuthPage(state: AppState) {
         </div>
       </nav>
       <section class="auth-stage">
-        <div class="auth-info-panel">
-          <div class="auth-logo-card">
-            <img src="${HERO_LOGO_PATH}" alt="SATRIA aquaculture logo" />
-            <span>Water Quality Intelligence</span>
-          </div>
-          <span class="auth-kicker">${isRegister ? "New Operator Setup" : "Secure Operator Access"}</span>
-          <h2>${isRegister ? "Buat akun, lalu lengkapi profil operasional." : "Masuk untuk membaca status air berbasis data real."}</h2>
-          <p>SATRIA menghubungkan data kualitas air clean dataset, riwayat input user, dan model prediksi backend agar keputusan monitoring lebih cepat dan terdokumentasi.</p>
-          <div class="auth-benefits">
-            <span>Realtime Supabase logs</span>
-            <span>Profile-gated prediction workflow</span>
-            <span>EDA global dan analytics per user</span>
-          </div>
-        </div>
         <form class="auth-card" id="authForm">
-          <h1>${isRegister ? label("createAccount").toUpperCase() : label("userLogin").toUpperCase()}</h1>
-          <p class="subtitle">${isRegister ? label("authRegisterSubtitle") : label("authLoginSubtitle")}</p>
-          ${isRegister ? renderInput("fullName", "text", "Nama lengkap operator") : ""}
-          ${renderInput("email", "email", "Email aktif untuk autentikasi")}
-          ${renderInput("password", "password", "Password minimal 6 karakter")}
-          <label class="remember-row"><input type="checkbox" checked /><span>${label("remember")}</span></label>
-          <button class="primary-button" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? label("processing") : isRegister ? label("register") : label("login")}</button>
-          <div class="auth-links">
-            <button id="toggleModeBottom" type="button">${isRegister ? label("login") : label("register")}</button>
-            <button id="forgotPassword" type="button">${label("forgotPassword")}</button>
+          <div class="auth-card-logo">
+            <img src="${HERO_LOGO_PATH}" alt="SATRIA logo" />
+            <span>SATRIA</span>
           </div>
+          <h1>${isRegister ? label("registerTitle") : label("loginTitle")}</h1>
+          <p class="subtitle">${isRegister ? label("authRegisterSubtitle") : label("authLoginSubtitle")}</p>
+          ${isRegister ? renderInput("fullName", "text", label("authFullName"), label("authFullNamePlaceholder")) : ""}
+          ${renderInput("email", "email", label("authEmail"), label("authEmailPlaceholder"))}
+          ${renderInput("password", "password", label("authPassword"), label("authPasswordPlaceholder"))}
+          ${isRegister ? renderInput("confirmPassword", "password", label("authConfirmPassword"), label("authConfirmPasswordPlaceholder")) : ""}
+          ${!isRegister ? `<div class="auth-helper-row"><label class="remember-row"><input type="checkbox" checked /><span>${label("remember")}</span></label><button id="forgotPassword" type="button">${label("forgotPassword")}</button></div>` : ""}
+          <button class="primary-button" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? label("processing") : isRegister ? label("register") : label("login")}</button>
+          <button class="auth-mode-link" id="toggleModeBottom" type="button">${isRegister ? label("switchToLogin") : label("switchToRegister")}</button>
           ${state.message ? `<div class="message">${state.message}</div>` : ""}
         </form>
       </section>
@@ -73,11 +62,11 @@ function renderLanguageSwitcher(state: AppState) {
   return `<div class="language-switcher" aria-label="Language switcher"><button class="${state.language === "id" ? "active" : ""}" type="button" data-language="id">ID</button><button class="${state.language === "en" ? "active" : ""}" type="button" data-language="en">EN</button></div>`;
 }
 
-function renderInput(id: string, type: string, placeholder: string) {
+function renderInput(id: string, type: string, label: string, placeholder: string) {
   return `
     <label class="input-group" for="${id}">
-      <span class="input-icon">${type === "password" ? "L" : "U"}</span>
-      <span class="auth-field-copy"><span>${placeholder}</span><input id="${id}" name="${id}" type="${type}" required /></span>
+      <span>${label}</span>
+      <input id="${id}" name="${id}" type="${type}" placeholder="${placeholder}" required />
     </label>
   `;
 }
@@ -95,13 +84,70 @@ function renderPublicHomePage(state: AppState) {
   const label = (key: Parameters<typeof t>[1]) => t(state.language, key);
   return `
     <main class="platform-shell public-shell">
-      <nav class="platform-nav">
+      <nav class="platform-nav public-nav">
         <button class="brand platform-brand" type="button" data-page="home"><span class="brand-mark">S</span><span>SATRIA</span></button>
-        <div class="platform-links"><button class="active" type="button" data-page="home">${label("home")}</button><button type="button" data-auth-mode="login">${label("predictions")}</button><button type="button" data-auth-mode="login">${label("monitoring")}</button><button type="button" data-auth-mode="login">${label("reports")}</button><button type="button" data-auth-mode="login">EDA</button></div>
+        <button class="public-menu-toggle" type="button" data-menu-toggle aria-label="${label("publicNavOpen")}"><span></span><span></span><span></span></button>
+        <div class="platform-links public-links"><button class="active" type="button" data-page="home">${label("home")}</button><button type="button" data-auth-mode="login">${label("monitoring")}</button><button type="button" data-auth-mode="login">${label("eda")}</button><button type="button" data-auth-mode="login">${label("predictions")}</button><button type="button" data-auth-mode="login">${label("reports")}</button></div>
         <div class="public-auth-actions">${renderLanguageSwitcher(state)}<button type="button" data-auth-mode="login">${label("login")}</button><button type="button" data-auth-mode="register">${label("register")}</button></div>
       </nav>
-      ${renderHomePage(state)}
+      ${renderPublicLandingPage(state)}
     </main>
+  `;
+}
+
+function renderPublicLandingPage(state: AppState) {
+  const label = (key: Parameters<typeof t>[1]) => t(state.language, key);
+  const features = [
+    ["Monitoring", label("featureMonitoring"), "M"],
+    [label("eda"), label("featureEda"), "E"],
+    [label("predictions"), label("featurePrediction"), "P"],
+    [label("reports"), label("featureReports"), "R"],
+  ];
+
+  return `
+    <section class="public-landing">
+      <div class="public-hero">
+        <div class="public-hero-copy">
+          <span class="hero-chip">${label("authBrandLine")}</span>
+          <h1>${label("publicHeroTitle")}</h1>
+          <p>${label("publicHeroSubtitle")}</p>
+          <div class="public-hero-actions">
+            <button class="primary-button" type="button" data-auth-mode="login">${label("login")}</button>
+            <button class="secondary-button" type="button" data-auth-mode="register">${label("register")}</button>
+            <a href="#about-satria">${label("learnMore")}</a>
+          </div>
+        </div>
+        <div class="public-hero-panel" aria-label="SATRIA preview">
+          <img src="${HERO_LOGO_PATH}" alt="SATRIA aquaculture logo" />
+          <div>
+            <span>${label("monitoring")}</span>
+            <strong>pH | DO | Nitrite | Ammonia</strong>
+          </div>
+        </div>
+      </div>
+      <section class="public-section">
+        <div class="public-section-heading">
+          <h2>SATRIA</h2>
+          <p>${label("publicHeroSubtitle")}</p>
+        </div>
+        <div class="public-feature-grid">
+          ${features.map(([title, body, icon]) => `<article><span>${icon}</span><h3>${title}</h3><p>${body}</p></article>`).join("")}
+        </div>
+      </section>
+      <section class="public-about" id="about-satria">
+        <div>
+          <span class="hero-chip">${label("aboutTitle")}</span>
+          <h2>${label("aboutTitle")}</h2>
+          <p>${label("aboutBody")}</p>
+        </div>
+        <dl>
+          <div><dt>${label("version")}</dt><dd>v0.1 (2026)</dd></div>
+          <div><dt>${label("contact")}</dt><dd>satria.waterquality@example.com</dd></div>
+          <div><dt>${label("githubRepository")}</dt><dd>SoviaLearner/satria-water-quality-ews</dd></div>
+        </dl>
+      </section>
+      ${renderHomeFooter()}
+    </section>
   `;
 }
 
@@ -119,16 +165,17 @@ function renderPlatformNav(state: AppState) {
   const label = (key: Parameters<typeof t>[1]) => t(state.language, key);
   const links: { page: AppPage; label: string }[] = [
     { page: "home", label: label("dashboard") },
-    { page: "prediction", label: label("predictions") },
     { page: "analytics", label: label("monitoring") },
+    { page: "eda", label: label("eda") },
+    { page: "prediction", label: label("predictions") },
     { page: "reports", label: label("reports") },
-    { page: "eda", label: "EDA" },
     { page: "settings", label: label("profile") },
   ];
 
   return `
-    <nav class="platform-nav">
+    <nav class="platform-nav app-nav">
       <button class="brand platform-brand" type="button" data-page="home"><span class="brand-mark">S</span><span>SATRIA</span></button>
+      <button class="public-menu-toggle app-menu-toggle" type="button" data-menu-toggle aria-label="${label("publicNavOpen")}"><span></span><span></span><span></span></button>
       <div class="platform-links">${links.map((link) => `<button class="${state.currentPage === link.page ? "active" : ""}" type="button" data-page="${link.page}">${link.label}</button>`).join("")}</div>
       <div class="platform-user">
         ${renderLanguageSwitcher(state)}
@@ -138,6 +185,18 @@ function renderPlatformNav(state: AppState) {
           <span class="profile-dot">${escapeHtml(getInitials(fullName) || "S")}</span>
         </button>
       </div>
+      <button class="mobile-nav-overlay" type="button" data-menu-overlay aria-label="Close navigation"></button>
+      <aside class="mobile-sidebar" aria-label="SATRIA mobile navigation">
+        <div class="mobile-sidebar-head">
+          <span class="brand"><span class="brand-mark">S</span><span>SATRIA</span></span>
+          <button type="button" data-menu-toggle>${label("publicNavClose")}</button>
+        </div>
+        <div class="mobile-sidebar-links">
+          ${links.map((link) => `<button class="${state.currentPage === link.page ? "active" : ""}" type="button" data-page="${link.page}">${link.label}</button>`).join("")}
+          <button class="danger" id="navLogoutButton" type="button">${label("logout")}</button>
+        </div>
+        ${renderLanguageSwitcher(state)}
+      </aside>
     </nav>
   `;
 }
@@ -279,7 +338,9 @@ function filteredLogs(state: AppState) {
 
 function renderEdaPage(state: AppState) {
   const isEnglish = state.language === "en";
-  return `<section class="work-page eda-report-page"><div class="page-heading row-heading"><div><h1>${isEnglish ? "Exploratory Data Analysis" : "Analisis Data Eksploratif"}</h1><p>${isEnglish ? "This page displays exploratory analysis results of water quality data directly generated from the PyCaret research notebook. The EDA content is preserved to match the research output." : "Halaman ini menampilkan hasil analisis eksploratif data kualitas air yang berasal langsung dari notebook penelitian PyCaret. Isi EDA tidak diubah agar tetap sesuai dengan hasil penelitian."}</p><span class="realtime-badge on">Notebook report preserved</span></div><button class="refresh-button" type="button" data-page="reports">${isEnglish ? "View Full Report" : "Lihat Laporan Lengkap"}</button></div><div class="eda-label-grid"><article><strong>Ideal = 0</strong><p>${isEnglish ? "Water quality is safe and meets the expected standard." : "Kondisi air aman dan sesuai standar."}</p></article><article><strong>Sedang / Moderate = 1</strong><p>${isEnglish ? "Water quality requires attention." : "Kondisi air memerlukan perhatian."}</p></article><article><strong>Bahaya / Dangerous = 2</strong><p>${isEnglish ? "Water quality may be hazardous." : "Kondisi air berpotensi membahayakan."}</p></article></div><article class="eda-report-viewer"><div class="eda-viewer-header"><span>PyCaret EDA Report</span><small>/reports/PBL_eda_pycaret_report.html</small></div><iframe title="PBL PyCaret EDA Report" src="/reports/PBL_eda_pycaret_report.html" loading="lazy"></iframe></article></section>`;
+  const stats = computeEdaStats(state.edaRows);
+  const active = numericParameters.find((item) => item.key === state.edaMetric);
+  return `<section class="work-page eda-native-page"><div class="page-heading row-heading"><div><h1>${isEnglish ? "Exploratory Data Analysis" : "Analisis Data Eksploratif"}</h1><p>${isEnglish ? "Native SATRIA EDA dashboard based on the same dataset context as the PyCaret research report. Values are loaded from Supabase and presented without raw HTML embedding." : "Dashboard EDA native SATRIA berdasarkan konteks dataset yang sama dengan report penelitian PyCaret. Nilai dimuat dari Supabase dan disajikan tanpa embed HTML mentah."}</p><span class="realtime-badge ${state.realtimeConnected ? "on" : ""}">${state.realtimeConnected ? "Supabase synced" : "Supabase pending"}</span></div><div class="eda-action-row"><button class="refresh-button" type="button" data-refresh>${isEnglish ? "Refresh Data" : "Refresh Data"}</button><button class="refresh-button secondary" type="button" data-page="reports">${isEnglish ? "View Full Report" : "Lihat Laporan Lengkap"}</button></div></div><div class="eda-summary-grid"><article><span>Rows</span><strong>${formatNumber(stats.rows)}</strong><p>Sample dari water_quality_clean.</p></article><article><span>Features</span><strong>${formatNumber(stats.features)}</strong><p>Kolom dataset yang terbaca.</p></article><article><span>Missing Values</span><strong>${stats.missingPct.toFixed(2)}%</strong><p>Persentase cell kosong.</p></article><article><span>Avg Nitrite</span><strong>${stats.nitriteMean.toFixed(3)}</strong><p>Mapping memakai nitrite_mg_l_1.</p></article></div><div class="eda-label-grid"><article><strong>Ideal = 0</strong><p>${isEnglish ? "Water quality is safe and meets the expected standard." : "Kondisi air aman dan sesuai standar."}</p></article><article><strong>Sedang / Moderate = 1</strong><p>${isEnglish ? "Water quality requires attention." : "Kondisi air memerlukan perhatian."}</p></article><article><strong>Bahaya / Dangerous = 2</strong><p>${isEnglish ? "Water quality may be hazardous." : "Kondisi air berpotensi membahayakan."}</p></article></div><div class="eda-dashboard-grid"><article class="chart-card wide"><div class="chart-heading"><div><h2>Parameter Distribution: ${escapeHtml(active?.label || "pH")}</h2><p>${isEnglish ? "Distribution chart for the selected water quality parameter." : "Grafik distribusi untuk parameter kualitas air yang dipilih."}</p></div>${renderMetricTabs(state.edaMetric, "eda")}</div>${renderHistogram(state.edaRows, state.edaMetric)}</article><article class="chart-card"><h2>Class Distribution</h2>${renderClassDistribution(state.edaRows)}</article><article class="chart-card"><h2>pH Distribution</h2>${renderPhDistribution(state.edaRows)}</article><article class="chart-card wide"><h2>Outlier Analysis</h2>${renderOutlierAnalysis(state.edaRows)}</article><article class="chart-card wide"><h2>Statistical Summary</h2>${renderStatsTable(state)}</article><article class="chart-card wide"><h2>Dataset Overview & Missing Values</h2>${renderDataInfoTable(state.edaRows)}</article><article class="chart-card wide"><h2>Chart Explanation</h2><p class="chart-help">${isEnglish ? "Read distribution bars as frequency groups, class distribution as label composition, and outlier cards as IQR-based flags. Extreme values should be validated before removal because they may indicate real early warning conditions." : "Baca batang distribusi sebagai kelompok frekuensi, distribusi kelas sebagai komposisi label, dan kartu outlier sebagai flag berbasis IQR. Nilai ekstrem perlu divalidasi sebelum dihapus karena bisa menunjukkan kondisi peringatan dini yang nyata."}</p></article></div></section>`;
 }
 
 function renderStatsTable(state: AppState) {

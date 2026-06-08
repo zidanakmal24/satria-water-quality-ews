@@ -132,7 +132,7 @@ function renderPlatformNav(state: AppState) {
       <div class="platform-links">${links.map((link) => `<button class="${state.currentPage === link.page ? "active" : ""}" type="button" data-page="${link.page}">${link.label}</button>`).join("")}</div>
       <div class="platform-user">
         ${renderLanguageSwitcher(state)}
-        <button class="notification-button" type="button" disabled aria-label="Notifications">!</button>
+        <button class="notification-button" type="button" disabled aria-label="Notifications">Alert</button>
         <button class="profile-menu ${state.currentPage === "settings" ? "active" : ""}" type="button" data-page="settings">
           <span>Welcome,<strong>${escapeHtml(fullName)}</strong></span>
           <span class="profile-dot">${escapeHtml(getInitials(fullName) || "S")}</span>
@@ -220,12 +220,12 @@ function renderPredictionPage(state: AppState) {
           <div class="preset-section">
             <div class="preset-header">
               <span class="preset-title">DEMO PRESETS (SATU-KLIK ISI OTOMATIS)</span>
-              <button type="reset" class="preset-reset-btn">↺ Reset Form</button>
+              <button type="reset" class="preset-reset-btn">Reset Form</button>
             </div>
             <div class="preset-buttons">
-              <button type="button" class="preset-btn optimal" data-preset="optimal">✅ Air Ideal (Optimal)</button>
-              <button type="button" class="preset-btn moderate" data-preset="moderate">⚠️ Air Stress (Sedang)</button>
-              <button type="button" class="preset-btn critical" data-preset="critical">🚨 Air Bahaya (Kritis)</button>
+              <button type="button" class="preset-btn optimal" data-preset="optimal">Air Ideal (Optimal)</button>
+              <button type="button" class="preset-btn moderate" data-preset="moderate">Air Stress (Sedang)</button>
+              <button type="button" class="preset-btn critical" data-preset="critical">Air Bahaya (Kritis)</button>
             </div>
           </div>
           <div class="parameter-grid">${predictionFields.map(([name, label, example]) => `<label><span>${label}</span><small>Cara format: isi angka saja, gunakan titik untuk desimal.</small><input name="${name}" type="number" step="any" placeholder="Contoh: ${example}" required /><em class="input-error">Inputan yang dilakukan harus sesuai dengan format petunjuk di atas!</em></label>`).join("")}</div><button class="execute-button" id="executePrediction" type="submit" disabled>${state.loading ? "Running..." : "Execute ML Model Prediction"}</button><div class="prediction-actions"><label><span>Upload JSON Batch</span><small>File harus berisi array object dengan nama field API yang sama seperti form.</small><input id="bulkPredictionFile" type="file" accept="application/json" ${state.loading ? "disabled" : ""} /></label></div>${state.message ? `<div class="message">${state.message}</div>` : ""}</form>
@@ -238,7 +238,7 @@ function renderPredictionPage(state: AppState) {
 
 function renderPredictionResult(state: AppState) {
   const result = state.latestPrediction!;
-  return `<div class="result-ready"><span class="result-badge">${escapeHtml(result.predicted_suitability_tier)}</span><h2>${escapeHtml(result.predicted_suitability_tier)}</h2><p>Class ID: ${result.predicted_class_id}</p>${renderRecommendation(result.predicted_suitability_tier)}${Object.entries(result.probabilities).map(([key, value]) => `<div class="prob-row"><span>${escapeHtml(key)}</span><strong>${(value * 100).toFixed(2)}%</strong></div>`).join("")}</div>`;
+  return `<div class="result-ready"><span class="result-badge">${escapeHtml(result.predicted_suitability_tier)}</span><h2>${escapeHtml(result.predicted_suitability_tier)}</h2><p>Class ID: ${result.predicted_class_id}</p>${renderRecommendation(result.predicted_suitability_tier)}${Object.entries(result.probabilities).map(([key, value]) => `<div class="prob-row"><span>${escapeHtml(key)}</span><strong>${(value * 100).toFixed(2)}%</strong></div>`).join("")}<button class="report-link-button" type="button" data-page="reports">Lihat Laporan Lengkap</button></div>`;
 }
 
 function renderRecommendation(tier: string) {
@@ -260,7 +260,9 @@ function renderAnalyticsPage(state: AppState) {
 }
 
 function renderReportsPage(state: AppState) {
-  return `<section class="work-page"><div class="page-heading row-heading"><div><h1>Historical Log Reports</h1><p>Comprehensive archive of your prediction history and ML classifications.</p></div><button class="refresh-button" id="refreshData" type="button">Refresh Logs</button></div><div class="report-toolbar"><input id="reportSearch" placeholder="Search by status..." value="${escapeAttribute(state.reportSearch)}" /><button type="button" data-refresh>Sync Supabase</button><button type="button" id="downloadReportsCsv">Download CSV</button></div><div class="table-wrap"><table class="log-table"><thead><tr><th>Timestamp</th><th>User</th><th>Parameters (pH/Temp/DO)</th><th>Status</th><th>Actions</th></tr></thead><tbody>${renderReportRows(state)}</tbody></table></div><footer class="reports-footer">Showing ${filteredLogs(state).length} of ${state.predictionLogs.length} entries from Supabase prediction_results.</footer>${state.message ? `<div class="message">${state.message}</div>` : ""}</section>`;
+  const latest = state.predictionLogs[0];
+  const latestStatus = state.latestPrediction?.predicted_suitability_tier || latest?.predicted_suitability_tier || "Belum ada prediksi";
+  return `<section class="work-page"><div class="page-heading row-heading"><div><h1>Laporan Akhir SATRIA</h1><p>Ringkasan monitoring, referensi EDA notebook, hasil prediksi, dan interpretasi kualitas air.</p></div><button class="refresh-button" id="refreshData" type="button">Refresh Logs</button></div><div class="report-summary-grid"><article><span>Monitoring Summary</span><strong>${formatNumber(state.predictionLogs.length)}</strong><p>Total log prediksi user dari Supabase.</p></article><article><span>EDA Summary Reference</span><strong>PyCaret</strong><p>EDA mengikuti report notebook asli tanpa kalkulasi ulang.</p><button type="button" data-page="eda">Lihat EDA</button></article><article><span>Prediction Summary</span><strong>${escapeHtml(latestStatus)}</strong><p>Hasil terakhir dapat menjadi peringatan awal kualitas air.</p></article></div><article class="final-interpretation"><h2>Final Interpretation</h2><p>Berdasarkan hasil prediksi sistem, kualitas air diklasifikasikan sebagai <b>${escapeHtml(latestStatus)}</b>. Hasil ini dapat digunakan sebagai peringatan awal untuk membantu pengambilan keputusan monitoring, aerasi, dan pengelolaan kolam.</p><p class="chart-caption">Fitur export PDF dapat disiapkan untuk pengembangan berikutnya.</p></article><div class="report-toolbar"><input id="reportSearch" placeholder="Search by status..." value="${escapeAttribute(state.reportSearch)}" /><button type="button" data-refresh>Sync Supabase</button><button type="button" id="downloadReportsCsv">Download CSV</button></div><div class="table-wrap"><table class="log-table"><thead><tr><th>Timestamp</th><th>User</th><th>Parameters (pH/Temp/DO)</th><th>Status</th><th>Actions</th></tr></thead><tbody>${renderReportRows(state)}</tbody></table></div><footer class="reports-footer">Showing ${filteredLogs(state).length} of ${state.predictionLogs.length} entries from Supabase prediction_results.</footer>${state.message ? `<div class="message">${state.message}</div>` : ""}</section>`;
 }
 
 function renderReportRows(state: AppState) {
@@ -276,9 +278,8 @@ function filteredLogs(state: AppState) {
 }
 
 function renderEdaPage(state: AppState) {
-  const stats = computeEdaStats(state.edaRows);
-  const active = numericParameters.find((item) => item.key === state.edaMetric);
-  return `<section class="work-page"><div class="page-heading row-heading"><div><h1>Global Clean Dataset EDA</h1><p>EDA memakai keseluruhan dataset clean dari Supabase water_quality_clean. Grafik ini edukatif/global, terpisah dari Analytics user.</p><span class="realtime-badge ${state.realtimeConnected ? "on" : ""}">${state.realtimeConnected ? "Realtime dataset watcher on" : "Manual refresh available"}</span></div><button class="refresh-button" id="refreshData" type="button">Refresh EDA</button></div><div class="eda-summary-grid"><article><span>Total Clean Rows</span><strong>${formatNumber(state.edaTotalRows || stats.rows)}</strong><p>Exact Supabase count</p></article><article><span>Features Extracted</span><strong>${stats.features}</strong><p>Chemical and physical variables</p></article><article><span>Missing Values</span><strong>${stats.missingPct.toFixed(2)}%</strong><p>Calculated from loaded sample</p></article></div><div class="eda-grid"><article class="stats-table"><h2>Descriptive Statistics</h2>${renderStatsTable(state)}</article><article class="chart-card wide"><div class="chart-heading"><h2>${escapeHtml(active?.label || "Parameter")} Distribution</h2>${renderMetricTabs(state.edaMetric, "eda")}</div>${renderHistogram(state.edaRows, state.edaMetric)}</article><article class="chart-card"><h2>Suitability Class Distribution</h2>${renderDatasetClassDistribution(state.edaRows)}</article><article class="chart-card"><h2>Parameter Risk Flags</h2>${renderRiskFlagSummary(state.edaRows)}</article><article class="chart-card wide"><h2>Global Parameter Correlation</h2><p class="chart-caption">Korelasi dihitung dari sample clean dataset yang dimuat dari Supabase.</p>${renderHeatmap(state.edaRows)}</article><article class="chart-card box-wide"><h2>Outlier Analysis</h2>${renderBoxplotLike(state.edaRows, state.edaMetric)}</article></div></section>`;
+  const isEnglish = state.language === "en";
+  return `<section class="work-page eda-report-page"><div class="page-heading row-heading"><div><h1>${isEnglish ? "Exploratory Data Analysis" : "Analisis Data Eksploratif"}</h1><p>${isEnglish ? "This page displays exploratory analysis results of water quality data directly generated from the PyCaret research notebook. The EDA content is preserved to match the research output." : "Halaman ini menampilkan hasil analisis eksploratif data kualitas air yang berasal langsung dari notebook penelitian PyCaret. Isi EDA tidak diubah agar tetap sesuai dengan hasil penelitian."}</p><span class="realtime-badge on">Notebook report preserved</span></div><button class="refresh-button" type="button" data-page="reports">${isEnglish ? "View Full Report" : "Lihat Laporan Lengkap"}</button></div><div class="eda-label-grid"><article><strong>Ideal = 0</strong><p>${isEnglish ? "Water quality is safe and meets the expected standard." : "Kondisi air aman dan sesuai standar."}</p></article><article><strong>Sedang / Moderate = 1</strong><p>${isEnglish ? "Water quality requires attention." : "Kondisi air memerlukan perhatian."}</p></article><article><strong>Bahaya / Dangerous = 2</strong><p>${isEnglish ? "Water quality may be hazardous." : "Kondisi air berpotensi membahayakan."}</p></article></div><article class="eda-report-viewer"><div class="eda-viewer-header"><span>PyCaret EDA Report</span><small>/reports/PBL_eda_pycaret_report.html</small></div><iframe title="PBL PyCaret EDA Report" src="/reports/PBL_eda_pycaret_report.html" loading="lazy"></iframe></article></section>`;
 }
 
 function renderStatsTable(state: AppState) {

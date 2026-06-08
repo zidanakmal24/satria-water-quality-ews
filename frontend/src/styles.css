@@ -352,14 +352,14 @@ button:disabled {
 }
 
 .platform-shell {
+  --platform-nav-height: 64px;
   min-height: 100vh;
-  display: grid;
-  grid-template-rows: 64px 1fr;
+  display: block;
   background: #f4f7fb;
 }
 
 .platform-nav {
-  min-height: 64px;
+  min-height: var(--platform-nav-height);
   background: #155989;
   color: #ffffff;
   display: grid;
@@ -367,9 +367,12 @@ button:disabled {
   align-items: center;
   gap: 34px;
   padding: 0 clamp(28px, 12vw, 260px);
-  position: sticky;
+  position: fixed;
   top: 0;
-  z-index: 10;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  box-shadow: 0 10px 28px rgba(8, 43, 73, 0.12);
 }
 
 .platform-brand,
@@ -474,13 +477,13 @@ button:disabled {
 }
 
 .hero-band {
-  min-height: 620px;
+  min-height: calc(620px + var(--platform-nav-height));
   background: linear-gradient(120deg, #155989 0%, #0d456f 58%, #073252 100%);
   display: grid;
   grid-template-columns: minmax(380px, 1fr) minmax(360px, 520px);
   align-items: center;
   gap: clamp(60px, 9vw, 140px);
-  padding: 74px clamp(32px, 12vw, 260px) 120px;
+  padding: calc(74px + var(--platform-nav-height)) clamp(32px, 12vw, 260px) 120px;
   color: #ffffff;
 }
 
@@ -784,7 +787,7 @@ button:disabled {
   width: min(1320px, calc(100% - 48px));
   min-height: calc(100vh - 64px);
   margin: 0 auto;
-  padding: 52px 0 58px;
+  padding: calc(52px + var(--platform-nav-height)) 0 58px;
 }
 
 .page-heading {
@@ -1965,7 +1968,7 @@ button:disabled {
 
   .hero-band {
     min-height: auto;
-    padding: 60px 32px 110px;
+    padding: calc(60px + var(--platform-nav-height)) 32px 110px;
   }
 
   .hero-image-frame {
@@ -2000,7 +2003,7 @@ button:disabled {
   }
 
   .platform-shell {
-    grid-template-rows: auto 1fr;
+    --platform-nav-height: 142px;
   }
 
   .platform-nav {
@@ -2021,11 +2024,11 @@ button:disabled {
   .work-page,
   .settings-page {
     width: min(100% - 28px, 1320px);
-    padding: 32px 0 44px;
+    padding: calc(32px + var(--platform-nav-height)) 0 44px;
   }
 
   .hero-band {
-    padding: 38px 20px 84px;
+    padding: calc(38px + var(--platform-nav-height)) 20px 84px;
   }
 
   .hero-content h1 {

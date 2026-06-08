@@ -25,8 +25,13 @@ function renderAuthPage(state: AppState) {
   return `
     <main class="auth-shell">
       <nav class="topbar">
-        <div class="brand"><span class="brand-mark">S</span><span>SATRIA</span></div>
-        <button class="nav-link" id="toggleModeTop" type="button">${isRegister ? "User Login" : "Create Account"}</button>
+        <button class="brand auth-brand" type="button" data-page="home"><span class="brand-mark">S</span><span>SATRIA</span></button>
+        <div class="auth-nav-actions">
+          <button class="nav-link" type="button" data-page="home">Home</button>
+          <button class="nav-link ${!isRegister ? "active" : ""}" type="button" data-auth-mode="login">Login</button>
+          <button class="nav-link ${isRegister ? "active" : ""}" type="button" data-auth-mode="register">Register</button>
+          <div class="language-switcher" aria-label="Language switcher"><button class="active" type="button" disabled>ID</button><button type="button" disabled>EN</button></div>
+        </div>
       </nav>
       <section class="auth-stage">
         <div class="auth-info-panel">
@@ -53,7 +58,7 @@ function renderAuthPage(state: AppState) {
           <button class="primary-button" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? "Processing..." : isRegister ? "Register" : "Login"}</button>
           <div class="auth-links">
             <button id="toggleModeBottom" type="button">${isRegister ? "Login" : "Register"}</button>
-            <button id="forgotPassword" type="button">Forget password</button>
+            <button id="forgotPassword" type="button">Forgot password</button>
           </div>
           ${state.message ? `<div class="message">${state.message}</div>` : ""}
         </form>

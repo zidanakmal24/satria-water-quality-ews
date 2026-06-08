@@ -74,8 +74,60 @@ button:disabled {
 .nav-link {
   border: 0;
   background: transparent;
-  color: #21d5bf;
+  color: #dcebf7;
   font-weight: 900;
+  min-height: 40px;
+  border-radius: 8px;
+  padding: 0 14px;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.nav-link:hover,
+.nav-link.active {
+  background: rgba(24, 199, 180, 0.14);
+  color: #21d5bf;
+}
+
+.nav-link:hover {
+  transform: translateY(-1px);
+}
+
+.auth-brand {
+  border: 0;
+  background: transparent;
+  color: #ffffff;
+}
+
+.auth-nav-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.language-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.language-switcher button {
+  width: 34px;
+  min-height: 30px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #dcebf7;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.language-switcher button.active {
+  background: #18c7b4;
+  color: #ffffff;
 }
 
 .auth-stage {
@@ -2003,6 +2055,32 @@ button:disabled {
 
   .auth-stage {
     padding: 32px 18px;
+  }
+
+  .auth-shell {
+    --auth-nav-height: 128px;
+  }
+
+  .topbar {
+    min-height: var(--auth-nav-height);
+    height: auto;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 14px 18px;
+  }
+
+  .auth-nav-actions {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .auth-nav-actions .nav-link {
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 0 12px;
   }
 
   .device-scene {

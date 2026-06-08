@@ -283,7 +283,15 @@ async function handleForgotPassword() {
   }
 
   const { error } = await supabase.auth.resetPasswordForEmail(email);
-  state.message = error ? error.message : "Link reset password dikirim ke email kamu.";
+  if (error) {
+    if (error.message.toLowerCase().includes("rate limit")) {
+      state.message = "Limit email tercapai (maks 3/jam dari Supabase). Tunggu beberapa saat atau gunakan custom SMTP.";
+    } else {
+      state.message = error.message;
+    }
+  } else {
+    state.message = "Link reset password dikirim ke email kamu.";
+  }
   render();
 }
 

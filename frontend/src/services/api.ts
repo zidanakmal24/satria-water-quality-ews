@@ -73,5 +73,5 @@ export async function requestTemporaryPasswordReset(email: string) {
     throw new Error(data.detail || "Reset password gagal diproses.");
   }
 
-  return String(data.message || "Password berhasil di-reset. Silakan login menggunakan password sementara: 12345678.");
+  return String(data.message || "Password berhasil di-reset. Password sementara 12345678 sudah dikirim ke email kamu.");
 }

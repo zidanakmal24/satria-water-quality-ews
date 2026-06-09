@@ -1,4 +1,6 @@
 import logging
+import smtplib
+from email.message import EmailMessage
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 from supabase import create_client
@@ -49,6 +51,56 @@ def _get_field(item, key: str, default=None):
     return getattr(item, key, default)
 
 
+def _send_temporary_password_email(email: str):
+    if not settings.SMTP_HOST or not settings.SMTP_FROM:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=(
+                "Password berhasil di-reset, tetapi email belum dapat dikirim karena SMTP belum dikonfigurasi "
+                "di api-service production."
+            ),
+        )
+
+    message = EmailMessage()
+    message["Subject"] = "Reset Password Sementara SATRIA"
+    message["From"] = settings.SMTP_FROM
+    message["To"] = email
+    message.set_content(
+        "\n".join(
+            [
+                "Halo,",
+                "",
+                "Permintaan Forgot Password akun SATRIA kamu sudah diproses.",
+                "",
+                f"Password sementara: {TEMPORARY_RESET_PASSWORD}",
+                "",
+                "Silakan login menggunakan password sementara tersebut.",
+                "Setelah berhasil login, segera ubah password melalui menu Profile > Security & Privacy.",
+                "",
+                "Jika kamu tidak meminta reset password ini, segera hubungi administrator SATRIA.",
+                "",
+                "SATRIA Water Quality EWS",
+            ]
+        )
+    )
+
+    try:
+        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=20) as smtp:
+            if settings.SMTP_USE_TLS:
+                smtp.starttls()
+            if settings.SMTP_USER or settings.SMTP_PASSWORD:
+                smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+            smtp.send_message(message)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Temporary password email failed")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Password berhasil di-reset, tetapi email notifikasi gagal dikirim: {exc}",
+        )
+
+
 @router.post("/forgot-password", response_model=ForgotPasswordResponse)
 async def forgot_password(payload: ForgotPasswordRequest):
     """
@@ -94,8 +146,9 @@ async def forgot_password(payload: ForgotPasswordRequest):
                 detail="User ditemukan, tetapi ID Supabase tidak terbaca.",
             )
         admin_client.auth.admin.update_user_by_id(user_id, {"password": TEMPORARY_RESET_PASSWORD})
+        _send_temporary_password_email(email)
         return {
-            "message": "Password berhasil di-reset. Silakan login menggunakan password sementara: 12345678."
+            "message": "Password berhasil di-reset. Password sementara 12345678 sudah dikirim ke email kamu."
         }
     except HTTPException:
         raise

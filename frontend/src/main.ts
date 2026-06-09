@@ -89,7 +89,15 @@ function bindEvents() {
   });
   document.querySelector("#reportSearch")?.addEventListener("input", (event) => {
     state.reportSearch = (event.currentTarget as HTMLInputElement).value;
+    state.reportPage = 1;
     render();
+  });
+  document.querySelectorAll<HTMLElement>("[data-report-page]").forEach((element) => {
+    element.addEventListener("click", () => {
+      const direction = element.dataset.reportPage;
+      state.reportPage = Math.max(1, state.reportPage + (direction === "next" ? 1 : -1));
+      render();
+    });
   });
   document.querySelectorAll<HTMLElement>("[data-settings-tab]").forEach((element) => {
     element.addEventListener("click", () => {

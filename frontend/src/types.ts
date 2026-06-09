@@ -59,4 +59,5 @@ export type AppState = {
   analyticsMetric: string;
   settingsTab: SettingsTab;
   reportSearch: string;
+  reportPage: number;
 };

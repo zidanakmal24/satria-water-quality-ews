@@ -22,4 +22,5 @@ export const state: AppState = {
   analyticsMetric: "dissolved_oxygen_mg_l",
   settingsTab: "profile",
   reportSearch: "",
+  reportPage: 1,
 };

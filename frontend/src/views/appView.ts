@@ -436,21 +436,41 @@ function translateStatus(status: string, language: AppState["language"]) {
 }
 
 function renderReportsPage(state: AppState) {
+  const label = (key: Parameters<typeof t>[1]) => t(state.language, key);
   const latest = state.predictionLogs[0];
-  const latestStatus = state.latestPrediction?.predicted_suitability_tier || latest?.predicted_suitability_tier || "Belum ada prediksi";
-  return `<section class="work-page"><div class="page-heading row-heading"><div><h1>Laporan Akhir SATRIA</h1><p>Ringkasan monitoring, referensi EDA notebook, hasil prediksi, dan interpretasi kualitas air.</p></div><button class="refresh-button" id="refreshData" type="button">Refresh Logs</button></div><div class="report-summary-grid"><article><span>Monitoring Summary</span><strong>${formatNumber(state.predictionLogs.length)}</strong><p>Total log prediksi user dari Supabase.</p></article><article><span>EDA Summary Reference</span><strong>PyCaret</strong><p>EDA mengikuti report notebook asli tanpa kalkulasi ulang.</p><button type="button" data-page="eda">Lihat EDA</button></article><article><span>Prediction Summary</span><strong>${escapeHtml(latestStatus)}</strong><p>Hasil terakhir dapat menjadi peringatan awal kualitas air.</p></article></div><article class="final-interpretation"><h2>Final Interpretation</h2><p>Berdasarkan hasil prediksi sistem, kualitas air diklasifikasikan sebagai <b>${escapeHtml(latestStatus)}</b>. Hasil ini dapat digunakan sebagai peringatan awal untuk membantu pengambilan keputusan monitoring, aerasi, dan pengelolaan kolam.</p><p class="chart-caption">Fitur export PDF dapat disiapkan untuk pengembangan berikutnya.</p></article><div class="report-toolbar"><input id="reportSearch" placeholder="Search by status..." value="${escapeAttribute(state.reportSearch)}" /><button type="button" data-refresh>Sync Supabase</button><button type="button" id="downloadReportsCsv">Download CSV</button></div><div class="table-wrap"><table class="log-table"><thead><tr><th>Timestamp</th><th>User</th><th>Parameters (pH/Temp/DO)</th><th>Status</th><th>Actions</th></tr></thead><tbody>${renderReportRows(state)}</tbody></table></div><footer class="reports-footer">Showing ${filteredLogs(state).length} of ${state.predictionLogs.length} entries from Supabase prediction_results.</footer>${state.message ? `<div class="message">${state.message}</div>` : ""}</section>`;
+  const latestStatus = state.latestPrediction?.predicted_suitability_tier || latest?.predicted_suitability_tier || label("noPredictionYet");
+  const filtered = filteredLogs(state);
+  const pageSize = 10;
+  const totalPages = Math.max(Math.ceil(filtered.length / pageSize), 1);
+  const currentPage = Math.min(Math.max(state.reportPage, 1), totalPages);
+  const start = (currentPage - 1) * pageSize;
+  const pageRows = filtered.slice(start, start + pageSize);
+  const interpretedStatus = translateStatus(latestStatus, state.language);
+  const interpretation = label("finalInterpretationBody").replace("{status}", interpretedStatus);
+  return `<section class="work-page reports-page"><div class="page-heading row-heading"><div><h1>${label("reportsTitle")}</h1><p>${label("reportsSubtitle")}</p></div><button class="refresh-button" id="refreshData" type="button">${label("refreshLogs")}</button></div><div class="report-summary-grid report-summary-grid-compact"><article><span>${label("monitoringSummary")}</span><strong>${formatNumber(state.predictionLogs.length)}</strong><p>${label("monitoringSummaryBody")}</p></article><article><span>${label("predictionSummary")}</span><strong>${escapeHtml(interpretedStatus)}</strong><p>${label("predictionSummaryBody")}</p></article></div><article class="final-interpretation"><h2>${label("finalInterpretation")}</h2><p>${escapeHtml(interpretation)}</p><p class="chart-caption">${label("pdfFutureNote")}</p></article><div class="report-toolbar"><input id="reportSearch" placeholder="${label("reportSearchPlaceholder")}" value="${escapeAttribute(state.reportSearch)}" /><button type="button" data-refresh>${label("syncSupabase")}</button><button type="button" id="downloadReportsCsv">${label("downloadCsv")}</button></div><div class="table-wrap"><table class="log-table"><thead><tr><th>${label("tableTimestamp")}</th><th>${label("tableUser")}</th><th>${label("tableParameters")}</th><th>${label("tableStatus")}</th><th>${label("tableActions")}</th></tr></thead><tbody>${renderReportRows(state, pageRows)}</tbody></table></div>${renderReportPagination(state, filtered.length, currentPage, totalPages, pageRows.length)}${state.message ? `<div class="message">${escapeHtml(state.message)}</div>` : ""}</section>`;
 }
 
-function renderReportRows(state: AppState) {
-  const rows = filteredLogs(state);
-  if (!rows.length) return `<tr><td colspan="5" class="empty-table">Belum ada log prediksi yang cocok.</td></tr>`;
-  return rows.map((row) => `<tr><td>${formatDate(row.created_at)}</td><td>${escapeHtml(state.profile?.full_name || "Current User")}</td><td><span class="pill">${Number(row.input_data?.ph || 0).toFixed(1)}</span><span class="pill">${Number(row.input_data?.temperature || 0).toFixed(1)} C</span><span class="pill">${Number(row.input_data?.dissolved_oxygen_mg_l || 0).toFixed(1)} mg/L</span></td><td><span class="status-pill ${statusClass(row.predicted_suitability_tier)}">${escapeHtml(row.predicted_suitability_tier)}</span></td><td><button type="button" title="Stored in Supabase">Synced</button></td></tr>`).join("");
+function renderReportRows(state: AppState, rows: PredictionLog[]) {
+  const label = (key: Parameters<typeof t>[1]) => t(state.language, key);
+  if (!rows.length) return `<tr><td colspan="5" class="empty-table">${label("noReportRows")}</td></tr>`;
+  const user = state.profile?.full_name || state.session?.user.email || "Current User";
+  return rows.map((row) => `<tr><td>${formatDate(row.created_at)}</td><td>${escapeHtml(user)}</td><td><span class="pill">pH ${Number(row.input_data?.ph || 0).toFixed(1)}</span><span class="pill">${Number(row.input_data?.temperature || 0).toFixed(1)} C</span><span class="pill">${Number(row.input_data?.dissolved_oxygen_mg_l || 0).toFixed(1)} mg/L</span></td><td><span class="status-pill ${statusClass(row.predicted_suitability_tier)}">${escapeHtml(translateStatus(row.predicted_suitability_tier, state.language))}</span></td><td><button type="button" title="${label("reportSynced")}">${label("reportSynced")}</button></td></tr>`).join("");
+}
+
+function renderReportPagination(state: AppState, filteredCount: number, currentPage: number, totalPages: number, currentCount: number) {
+  const label = (key: Parameters<typeof t>[1]) => t(state.language, key);
+  return `<footer class="reports-footer report-pagination"><span>${label("reportsShowing")} ${formatNumber(currentCount)} ${label("reportsOf")} ${formatNumber(filteredCount)} ${label("reportsEntries")} | ${label("totalData")}: ${formatNumber(state.predictionLogs.length)}</span><div><button type="button" data-report-page="prev" ${currentPage <= 1 ? "disabled" : ""}>${label("previous")}</button><strong>${label("page")} ${currentPage} / ${totalPages}</strong><button type="button" data-report-page="next" ${currentPage >= totalPages ? "disabled" : ""}>${label("next")}</button></div></footer>`;
 }
 
 function filteredLogs(state: AppState) {
   const term = state.reportSearch.trim().toLowerCase();
   if (!term) return state.predictionLogs;
-  return state.predictionLogs.filter((row) => row.predicted_suitability_tier.toLowerCase().includes(term));
+  const user = `${state.profile?.full_name || ""} ${state.session?.user.email || ""}`.toLowerCase();
+  return state.predictionLogs.filter((row) => {
+    const date = `${row.created_at || ""} ${formatDate(row.created_at)}`.toLowerCase();
+    const status = `${row.predicted_suitability_tier} ${translateStatus(row.predicted_suitability_tier, state.language)}`.toLowerCase();
+    return status.includes(term) || user.includes(term) || date.includes(term);
+  });
 }
 
 function renderEdaPage(state: AppState) {
